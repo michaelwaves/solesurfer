@@ -29,6 +29,9 @@ function ModeSelect({ onSelect }: { onSelect: (mode: GameMode) => void }) {
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
       <div className="max-w-md w-full px-6">
+        <a href="/" className="text-[#707278] hover:text-white text-xs uppercase tracking-widest mb-12 inline-block transition-colors no-underline">
+          &larr; Home
+        </a>
         <p className="text-xs uppercase tracking-[0.3em] text-[#707278] mb-4">
           Select Mode
         </p>
@@ -251,6 +254,9 @@ export default function PlayPage() {
         <button onClick={handleChangeMode} className="btn-outline-light px-4 py-2 text-xs uppercase tracking-widest font-medium">
           Menu
         </button>
+        <a href="/" className="btn-outline-light inline-block px-4 py-2 text-xs uppercase tracking-widest font-medium no-underline">
+          Home
+        </a>
       </div>
 
       <InsolePanel />

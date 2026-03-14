@@ -13,84 +13,113 @@ function StartButton() {
   return (
     <Link
       href="/play"
-      className={`group relative block w-full text-center px-8 py-5 rounded-2xl font-semibold text-lg transition-all duration-300 ${
-        hasDevices
-          ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white glow-blue"
-          : "bg-white/10 hover:bg-white/15 text-white border border-white/10 hover:border-white/20"
-      }`}
+      className="btn-red block w-full text-center px-8 py-4 rounded-none font-medium text-base tracking-wide uppercase"
     >
-      <span className="relative z-10">
-        {hasDevices
-          ? `Drop In (${connected.length} insole${connected.length > 1 ? "s" : ""} connected)`
-          : "Drop In with Keyboard"}
-      </span>
-      <span className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+      {hasDevices
+        ? `Drop In — ${connected.length} insole${connected.length > 1 ? "s" : ""} connected`
+        : "Drop In"}
     </Link>
   );
 }
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[#050a14] relative overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-blue-950/30 via-transparent to-purple-950/20" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-blue-500/5 rounded-full blur-3xl" />
-
-      <main className="relative mx-auto max-w-2xl px-6 pt-24 pb-16">
-        {/* Logo area */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-zinc-400 mb-6">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-            Powered by BrilliantSole + World Labs
-          </div>
-          <h1 className="text-6xl font-bold tracking-tight mb-4">
-            <span className="text-gradient">SoleSurfer</span>
+    <div className="min-h-screen bg-white">
+      {/* Hero */}
+      <div className="bg-[#111] text-white">
+        <div className="mx-auto max-w-6xl px-6 py-32">
+          <p className="text-xs uppercase tracking-[0.3em] text-[#707278] mb-6">
+            BrilliantSole + World Labs + WebXR
+          </p>
+          <h1 className="text-7xl font-bold tracking-tight leading-[0.95] mb-6">
+            Sole<br />Surfer
           </h1>
-          <p className="text-xl text-zinc-400 max-w-md mx-auto leading-relaxed">
-            Snowboard with your feet. Ride AI-generated mountains in XR.
+          <p className="text-lg text-[#707278] max-w-md leading-relaxed">
+            Snowboard with your feet. Ride AI-generated mountains.
+            Feel every carve through smart insoles.
           </p>
         </div>
+      </div>
 
-        {/* Insole connection */}
-        <div className="glass rounded-2xl p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
-              Insole Connection
+      {/* Content */}
+      <div className="mx-auto max-w-6xl px-6 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
+          {/* Left: Connect */}
+          <div>
+            <h2 className="text-xs uppercase tracking-[0.2em] text-[#707278] mb-6">
+              Connect Your Insoles
             </h2>
-            <span className="text-xs text-zinc-500">Optional</span>
+            <p className="text-sm text-[#707278] mb-8 leading-relaxed">
+              Pair your BrilliantSole insoles via Bluetooth for foot-controlled
+              snowboarding. Or use keyboard controls — your call.
+            </p>
+
+            <BluetoothClientWrapper
+              suspense={
+                <p className="text-sm text-[#707278]">Checking Bluetooth...</p>
+              }
+              notSupported={null}
+            >
+              <div className="flex flex-col gap-4 mb-8">
+                <AddDeviceButton />
+                <AvailableDevicesGrid />
+              </div>
+            </BluetoothClientWrapper>
+
+            <StartButton />
           </div>
 
-          <BluetoothClientWrapper
-            suspense={
-              <div className="flex items-center gap-2 text-sm text-zinc-500">
-                <span className="w-3 h-3 border-2 border-zinc-600 border-t-zinc-400 rounded-full animate-spin" />
-                Checking Bluetooth...
-              </div>
-            }
-            notSupported={null}
-          >
-            <div className="flex flex-col gap-4">
-              <AddDeviceButton />
-              <AvailableDevicesGrid />
+          {/* Right: How it works */}
+          <div>
+            <h2 className="text-xs uppercase tracking-[0.2em] text-[#707278] mb-6">
+              How It Works
+            </h2>
+            <div className="space-y-8">
+              {[
+                {
+                  num: "01",
+                  title: "Choose Your Run",
+                  desc: "Halfpipe or freeride. Pick an AI-generated mountain backdrop or ride procedural terrain.",
+                },
+                {
+                  num: "02",
+                  title: "Carve With Your Feet",
+                  desc: "Roll your foot to turn. Lean to control speed. Gravity does the rest — just like real snow.",
+                },
+                {
+                  num: "03",
+                  title: "Enter XR",
+                  desc: "Put on a PICO headset for full immersion. WebXR drops you on the mountain.",
+                },
+              ].map((step) => (
+                <div key={step.num} className="flex gap-4">
+                  <span className="text-[#e63946] font-bold text-sm tabular-nums mt-0.5">
+                    {step.num}
+                  </span>
+                  <div>
+                    <h3 className="font-semibold text-[#111] mb-1">{step.title}</h3>
+                    <p className="text-sm text-[#707278] leading-relaxed">{step.desc}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-          </BluetoothClientWrapper>
+          </div>
         </div>
+      </div>
 
-        {/* Start */}
-        <StartButton />
-
-        {/* Tech badges */}
-        <div className="flex items-center justify-center gap-4 mt-12">
-          {["WebXR", "Three.js", "World Labs", "BrilliantSole"].map((tech) => (
-            <span
-              key={tech}
-              className="px-3 py-1 text-xs text-zinc-500 bg-white/5 rounded-full border border-white/5"
-            >
-              {tech}
-            </span>
-          ))}
+      {/* Footer */}
+      <div className="border-t border-[#eef1f5]">
+        <div className="mx-auto max-w-6xl px-6 py-8 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            {["WebXR", "Three.js", "World Labs", "BrilliantSole"].map((tech) => (
+              <span key={tech} className="text-xs text-[#707278] uppercase tracking-wider">
+                {tech}
+              </span>
+            ))}
+          </div>
+          <span className="text-xs text-[#d8dde5]">2026</span>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

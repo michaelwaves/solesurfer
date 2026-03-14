@@ -14,36 +14,36 @@ export default function HUD({ state }: HUDProps) {
   const distance = state.distance.toFixed(0);
 
   return (
-    <div className="fixed top-4 left-4 z-10 pointer-events-none select-none">
-      <div className="glass rounded-2xl px-5 py-4 min-w-[140px] scanlines">
+    <div className="fixed top-5 left-5 z-10 pointer-events-none select-none">
+      <div className="glass-dark rounded-none px-5 py-4 min-w-[120px]">
         {/* Speed */}
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-4xl font-bold tabular-nums text-white tracking-tight">
+        <div className="flex items-baseline gap-1">
+          <span className="text-4xl font-bold tabular-nums text-white tracking-tighter font-mono">
             {speed}
           </span>
-          <span className="text-xs font-medium text-zinc-500 uppercase">km/h</span>
+          <span className="text-[10px] text-[#707278] uppercase tracking-widest">km/h</span>
         </div>
 
         {/* Distance */}
-        <div className="text-sm text-zinc-400 tabular-nums mt-1">
-          {distance}<span className="text-zinc-600">m</span>
+        <div className="text-xs text-[#707278] tabular-nums mt-1 font-mono">
+          {distance}m
         </div>
 
         {/* Airborne */}
         {state.player.airborne && (
-          <div className="mt-2 px-2 py-0.5 bg-yellow-500/20 rounded-md text-yellow-400 text-xs font-bold tracking-wider text-center animate-pulse">
-            AIRBORNE
+          <div className="mt-2 text-[#e63946] text-[10px] font-bold uppercase tracking-widest">
+            Airborne
           </div>
         )}
 
         {/* Input source */}
-        <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-white/5">
+        <div className="flex items-center gap-1.5 mt-3 pt-2 border-t border-white/10">
           <span
             className={`w-1.5 h-1.5 rounded-full ${
-              inputState.source === "insole" ? "bg-green-400" : "bg-zinc-600"
+              inputState.source === "insole" ? "bg-[#e63946]" : "bg-[#707278]"
             }`}
           />
-          <span className="text-[10px] text-zinc-500 uppercase tracking-wider">
+          <span className="text-[10px] text-[#707278] uppercase tracking-widest">
             {inputState.source === "insole" ? "Insole" : "Keyboard"}
           </span>
         </div>

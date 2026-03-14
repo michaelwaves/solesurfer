@@ -29,9 +29,7 @@ export default function InsolePanel() {
     try {
       const BS = await import("brilliantsole/browser");
       await BS.Device.Connect();
-    } catch (e) {
-      console.warn("Bluetooth connection failed:", e);
-    }
+    } catch {}
     setConnecting(false);
   };
 
@@ -41,33 +39,20 @@ export default function InsolePanel() {
   const deviceName = isConnected ? (connectedDevices[0] as any).name || "Insole" : null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-10">
+    <div className="fixed bottom-5 right-5 z-10">
       <button
         onClick={handleConnect}
         disabled={connecting}
-        className={`glass flex items-center gap-2.5 px-4 py-2.5 text-sm rounded-xl transition-all ${
-          isConnected
-            ? "border-green-500/20 text-green-300"
-            : connecting
-            ? "border-yellow-500/20 text-yellow-300"
-            : "text-zinc-400 hover:text-white hover:bg-white/10"
-        }`}
+        className="glass-dark flex items-center gap-2.5 px-4 py-2.5 text-xs uppercase tracking-widest transition-colors hover:bg-white/10"
       >
-        <span className="relative flex h-2 w-2">
-          {(isConnected || connecting) && (
-            <span
-              className={`absolute inset-0 rounded-full animate-ping opacity-75 ${
-                isConnected ? "bg-green-400" : "bg-yellow-400"
-              }`}
-            />
-          )}
-          <span
-            className={`relative inline-flex rounded-full h-2 w-2 ${
-              isConnected ? "bg-green-400" : connecting ? "bg-yellow-400" : "bg-zinc-600"
-            }`}
-          />
+        <span
+          className={`w-1.5 h-1.5 rounded-full ${
+            isConnected ? "bg-[#e63946]" : connecting ? "bg-white animate-pulse" : "bg-[#707278]"
+          }`}
+        />
+        <span className={isConnected ? "text-white" : "text-[#707278]"}>
+          {connecting ? "Connecting" : isConnected ? deviceName : "Connect Insole"}
         </span>
-        {connecting ? "Connecting..." : isConnected ? deviceName : "Connect Insole"}
       </button>
     </div>
   );

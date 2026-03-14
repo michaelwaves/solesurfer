@@ -1,15 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --background: #050a14;
-  --foreground: #e8edf5;
+  --background: #ffffff;
+  --foreground: #111111;
+  --red: #e63946;
+  --red-dark: #c1121f;
+  --gray-50: #f7f9fb;
+  --gray-100: #eef1f5;
+  --gray-200: #d8dde5;
+  --gray-400: #707278;
+  --gray-600: #3a3c42;
+  --gray-900: #111111;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-mono);
 }
 
 body {
@@ -18,52 +26,52 @@ body {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
 }
 
-/* Glow effects for buttons */
-.glow-blue {
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 60px rgba(59, 130, 246, 0.1);
+/* Dark mode for game screens */
+.theme-dark {
+  --background: #0a0a0a;
+  --foreground: #f7f9fb;
+  background: #0a0a0a;
+  color: #f7f9fb;
 }
 
-.glow-purple {
-  box-shadow: 0 0 20px rgba(147, 51, 234, 0.3), 0 0 60px rgba(147, 51, 234, 0.1);
+/* Red accent button */
+.btn-red {
+  background: var(--red);
+  color: white;
+  transition: background 0.2s;
+}
+.btn-red:hover {
+  background: var(--red-dark);
 }
 
-.glow-emerald {
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3), 0 0 60px rgba(16, 185, 129, 0.1);
+/* Outline button */
+.btn-outline {
+  background: transparent;
+  border: 1.5px solid var(--gray-900);
+  color: var(--gray-900);
+  transition: all 0.2s;
+}
+.btn-outline:hover {
+  background: var(--gray-900);
+  color: white;
 }
 
-/* Gradient text */
-.text-gradient {
-  background: linear-gradient(135deg, #60a5fa, #a78bfa, #60a5fa);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: shimmer 3s linear infinite;
+/* Dark outline button (for dark backgrounds) */
+.btn-outline-light {
+  background: transparent;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  color: white;
+  transition: all 0.2s;
+}
+.btn-outline-light:hover {
+  background: white;
+  color: var(--gray-900);
 }
 
-@keyframes shimmer {
-  to { background-position: 200% center; }
-}
-
-/* Frosted glass */
-.glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+/* Glass panel for in-game overlays */
+.glass-dark {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* Scanline effect for XR feel */
-.scanlines::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.03) 2px,
-    rgba(0, 0, 0, 0.03) 4px
-  );
-  pointer-events: none;
 }

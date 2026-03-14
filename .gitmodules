@@ -1,0 +1,3 @@
+[submodule "brilliantsole-cloud"]
+	path = brilliantsole-cloud
+	url = https://github.com/zakaton/brilliantsole-cloud.git

@@ -1,6 +1,33 @@
 export type GamePhase = "menu" | "connecting" | "loading" | "playing" | "paused";
 export type GameMode = "halfpipe" | "freeride";
 
+// Valid state transitions — any transition not listed here is invalid
+//
+//   menu ──► loading ──► playing ◄──► paused
+//     ▲                     │
+//     └─────────────────────┘ (restart)
+//
+const VALID_TRANSITIONS: Record<GamePhase, GamePhase[]> = {
+  menu: ["loading", "playing"],
+  connecting: ["loading", "menu"],
+  loading: ["playing", "menu"],
+  playing: ["paused", "menu"],
+  paused: ["playing", "menu"],
+};
+
+export function canTransition(from: GamePhase, to: GamePhase): boolean {
+  return VALID_TRANSITIONS[from]?.includes(to) ?? false;
+}
+
+export function transitionPhase(state: GameState, to: GamePhase): boolean {
+  if (canTransition(state.phase, to)) {
+    state.phase = to;
+    return true;
+  }
+  console.warn(`Invalid state transition: ${state.phase} → ${to}`);
+  return false;
+}
+
 export interface Vec3 {
   x: number;
   y: number;
@@ -10,12 +37,12 @@ export interface Vec3 {
 export interface PlayerState {
   position: Vec3;
   velocity: Vec3;
-  rotation: number; // Y-axis rotation (heading)
-  edgeAngle: number; // current carving edge angle
-  speed: number; // scalar speed
+  rotation: number;
+  edgeAngle: number;
+  speed: number;
   airborne: boolean;
   airborneTime: number;
-  trickRotation: number; // accumulated trick spin
+  trickRotation: number;
   lastGoodPosition: Vec3;
 }
 

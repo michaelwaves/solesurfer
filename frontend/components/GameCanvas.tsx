@@ -7,10 +7,12 @@ import { createCamera, updateCamera, handleResize } from "@/renderer/camera";
 import { createCharacter, updateCharacter } from "@/renderer/character";
 import { TerrainChunkManager } from "@/renderer/chunks";
 import { SnowParticles } from "@/renderer/particles";
+import { SpeedLines } from "@/renderer/speed-lines";
 import { SplatScene } from "@/renderer/splats";
+import { SoundManager } from "@/renderer/sound";
 import { VRHud } from "@/renderer/vr-hud";
 import { checkXRSupport, enterVR, exitVR } from "@/renderer/xr";
-import { createGameState, GameState, GameMode } from "@/game/state";
+import { createGameState, GameState, GameMode, transitionPhase } from "@/game/state";
 import { CONFIG } from "@/game/config";
 import { updatePhysics } from "@/game/physics";
 import { initKeyboardAdapter, pollKeyboard } from "@/input/keyboard-adapter";
@@ -60,6 +62,17 @@ export default function GameCanvas({
 
       const chunkManager = new TerrainChunkManager(scene);
       const snowParticles = new SnowParticles(scene);
+      const speedLines = new SpeedLines(scene);
+
+      // Sound — init on first user interaction
+      const sound = new SoundManager();
+      const initSound = () => {
+        sound.init();
+        window.removeEventListener("keydown", initSound);
+        window.removeEventListener("click", initSound);
+      };
+      window.addEventListener("keydown", initSound);
+      window.addEventListener("click", initSound);
 
       // Splat backdrop
       const splatScene = new SplatScene(scene);
@@ -72,22 +85,20 @@ export default function GameCanvas({
       // VR HUD
       const vrHud = new VRHud();
       scene.add(vrHud.getGroup());
-      vrHud.getGroup().visible = false; // hidden until VR is active
+      vrHud.getGroup().visible = false;
 
-      // Check WebXR support
       checkXRSupport().then((supported) => {
         onVRSupported?.(supported);
       });
 
-      // Game state
+      // Game state (use state machine transitions)
       const state = createGameState();
-      state.phase = "playing";
+      transitionPhase(state, "playing");
       state.player.position.y = getTerrainHeight(0, 0);
       state.player.velocity.z = -5;
 
       const cleanupKeyboard = initKeyboardAdapter();
 
-      // Shared render function used by both desktop and VR loops
       let lastTime = 0;
       let accumulator = 0;
 
@@ -116,8 +127,9 @@ export default function GameCanvas({
         updateCharacter(character, state.player);
         updateCamera(camera, state.player);
         snowParticles.update(state.player, rawDt);
+        speedLines.update(state.player, camera, rawDt);
+        sound.update(state.player);
 
-        // VR HUD follows camera when in VR
         if (renderer.xr.enabled && renderer.xr.isPresenting) {
           vrHud.getGroup().visible = true;
           vrHud.update(state, camera);
@@ -129,7 +141,7 @@ export default function GameCanvas({
         onStateUpdate?.(state);
       }
 
-      // Desktop: use standard rAF loop
+      // Desktop loop
       let desktopRafId = 0;
       let useDesktopLoop = true;
 
@@ -140,13 +152,12 @@ export default function GameCanvas({
       }
       desktopRafId = requestAnimationFrame(desktopTick);
 
-      // Expose VR enter/exit on the renderer ref for the parent to call
+      // VR enter/exit
       (renderer as any).__enterVR = () => {
         enterVR(
           renderer,
           (session) => {
             vrSessionRef.current = session;
-            // Switch to Three.js XR animation loop
             useDesktopLoop = false;
             cancelAnimationFrame(desktopRafId);
             lastTime = 0;
@@ -154,7 +165,6 @@ export default function GameCanvas({
             renderer.setAnimationLoop(gameRender);
           },
           () => {
-            // VR session ended — switch back to desktop loop
             vrSessionRef.current = null;
             renderer.setAnimationLoop(null);
             useDesktopLoop = true;
@@ -179,9 +189,13 @@ export default function GameCanvas({
         exitVR(vrSessionRef.current);
         cleanupKeyboard();
         window.removeEventListener("resize", onResize);
+        window.removeEventListener("keydown", initSound);
+        window.removeEventListener("click", initSound);
         chunkManager.dispose();
         snowParticles.dispose();
+        speedLines.dispose();
         splatScene.dispose();
+        sound.dispose();
         vrHud.dispose();
         renderer.dispose();
         scene.clear();
@@ -199,7 +213,6 @@ export default function GameCanvas({
     return cleanup;
   }, [init]);
 
-  // Expose VR controls via ref
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
@@ -209,14 +222,11 @@ export default function GameCanvas({
 
   if (error) {
     return (
-      <div className="fixed inset-0 bg-zinc-900 flex items-center justify-center">
+      <div className="fixed inset-0 bg-black flex items-center justify-center">
         <div className="text-center text-white max-w-md px-6">
-          <p className="text-2xl font-bold mb-4">Unable to Start Game</p>
-          <p className="text-zinc-400 mb-6">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700"
-          >
+          <p className="text-xl font-bold mb-4">Unable to Start Game</p>
+          <p className="text-[#707278] text-sm mb-6">{error}</p>
+          <button onClick={() => window.location.reload()} className="btn-red px-6 py-3 text-sm uppercase tracking-widest">
             Try Again
           </button>
         </div>
@@ -229,15 +239,12 @@ export default function GameCanvas({
       <canvas ref={canvasRef} id="game-canvas" className="fixed inset-0 w-full h-full" />
       <div
         id="webgl-lost-overlay"
-        className="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+        className="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/90"
       >
         <div className="text-center text-white">
-          <p className="text-2xl font-bold mb-4">WebGL Context Lost</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700"
-          >
-            Reload Page
+          <p className="text-xl font-bold mb-4">WebGL Context Lost</p>
+          <button onClick={() => window.location.reload()} className="btn-red px-6 py-3 text-sm uppercase tracking-widest">
+            Reload
           </button>
         </div>
       </div>

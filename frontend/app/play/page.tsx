@@ -266,7 +266,7 @@ export default function PlayPage() {
   return (
     <>
       <GameCanvas mode={mode} sceneUrl={sceneUrl} onStateUpdate={handleStateUpdate} onVRSupported={setVrSupported} restartKey={restartKey} />
-      <HUD state={gameState} />
+      <HUD state={gameState} mode={mode} onRestart={handleRestart} />
       <DebugOverlay state={gameState} />
 
       {/* Top-right controls */}

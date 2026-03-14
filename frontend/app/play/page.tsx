@@ -165,6 +165,8 @@ export default function PlayPage() {
   const [mode, setMode] = useState<GameMode>("halfpipe");
   const [sceneUrl, setSceneUrl] = useState<string | undefined>();
   const [restartKey, setRestartKey] = useState(0);
+  const [vrSupported, setVrSupported] = useState(false);
+  const [vrActive, setVrActive] = useState(false);
 
   const handleStateUpdate = useCallback((state: GameState) => {
     setGameState((prev) => {
@@ -209,6 +211,20 @@ export default function PlayPage() {
     setRestartKey((k) => k + 1);
   };
 
+  const handleToggleVR = () => {
+    const canvas = document.getElementById("game-canvas") as any;
+    const renderer = canvas?.__getRenderer?.();
+    if (!renderer) return;
+
+    if (vrActive) {
+      renderer.__exitVR?.();
+      setVrActive(false);
+    } else {
+      renderer.__enterVR?.();
+      setVrActive(true);
+    }
+  };
+
   if (screen === "mode") {
     return <ModeSelect onSelect={handleModeSelect} />;
   }
@@ -223,12 +239,25 @@ export default function PlayPage() {
         mode={mode}
         sceneUrl={sceneUrl}
         onStateUpdate={handleStateUpdate}
+        onVRSupported={setVrSupported}
         restartKey={restartKey}
       />
       <HUD state={gameState} />
       <DebugOverlay state={gameState} />
 
       <div className="fixed top-4 right-4 z-10 flex gap-2">
+        {vrSupported && (
+          <button
+            onClick={handleToggleVR}
+            className={`px-4 py-2 backdrop-blur-sm text-white text-sm rounded-lg transition-colors ${
+              vrActive
+                ? "bg-red-500/80 hover:bg-red-600/80"
+                : "bg-purple-500/80 hover:bg-purple-600/80"
+            }`}
+          >
+            {vrActive ? "Exit VR" : "Enter VR"}
+          </button>
+        )}
         <button
           onClick={handleRestart}
           className="px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white text-sm rounded-lg transition-colors"

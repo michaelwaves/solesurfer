@@ -14,17 +14,17 @@
 - **Effort:** S
 - **Depends on:** Phase 1c insole integration
 
-### 3. Update PLAN.md for WebSpatial removal
-- **What:** Remove WebSpatial from architecture diagram, rewrite Phase 3b to use Three.js HUD overlays, update dependency list
-- **Why:** WebSpatial is architecturally incompatible with Three.js canvas rendering (canvas content flattened to 2D panel). Decision made during CEO review.
+### 3. World Labs API error handling + procedural fallback
+- **What:** Wrap all World Labs API calls in try/catch. On any failure (401, 429, timeout, malformed): log error, show toast, fall back to procedural terrain
+- **Why:** Pre-generated scenes reduce risk, but if cache is lost or API is called live, failures must not crash the demo
+- **Effort:** S
+- **Depends on:** Phase 2a World Labs integration
+
+### 4. Remove brilliantsole-cloud submodule
+- **What:** Remove the empty git submodule and `.gitmodules` file
+- **Why:** The repo at github.com/zakaton/brilliantsole-cloud.git returns 404. Dead weight that confuses the project structure.
 - **Effort:** S
 - **Depends on:** Nothing — do before implementation starts
-
-### 4. HTTPS hosting + pre-hackathon deployment
-- **What:** Set up Vercel/Netlify deployment. Add to pre-hackathon checklist: deploy to HTTPS, verify PICO browser loads the URL, verify Web Bluetooth and WebXR work over HTTPS
-- **Why:** Web Bluetooth and WebXR both require secure context (HTTPS). Plan's pre-hackathon checklist was missing this.
-- **Effort:** S
-- **Depends on:** Phase 1a scaffolding (need a project to deploy)
 
 ### 5. On-screen debug overlay
 - **What:** Toggleable overlay (backtick key) showing: FPS, physics dt, insole connection state, raw input values, splat count, WebXR session state
@@ -32,11 +32,11 @@
 - **Effort:** M
 - **Depends on:** Phase 1d renderer
 
-### 7. World Labs API error handling + procedural fallback
-- **What:** Wrap all World Labs API calls in try/catch. On any failure (401, 429, timeout, malformed): log error, show toast, fall back to procedural terrain
-- **Why:** Pre-generated scenes reduce risk, but if cache is lost or API is called live, failures must not crash the demo
+### 7. WebGL context loss handling
+- **What:** Listen for `webglcontextlost` event on the canvas. Show a "Please reload the page" message instead of a black screen.
+- **Why:** GPU OOM or browser resource reclamation kills the game silently. 5 lines of code prevents the worst demo failure mode.
 - **Effort:** S
-- **Depends on:** Phase 2a World Labs integration
+- **Depends on:** Phase 1d renderer
 
 ## P2 — Should Do
 
@@ -44,14 +44,31 @@
 - **What:** Define game states (menu → connecting → loading → playing → paused) with valid transitions. Each state knows what inputs it accepts and what UI it shows.
 - **Why:** Without it, edge cases like 'enter VR while loading' or 'disconnect during play' have no structured handling. Implicit boolean flags create impossible-state bugs.
 - **Effort:** M
-- **Depends on:** Phase 1a scaffolding
+- **Depends on:** Phase 1a project setup
 
-## Architecture Decisions (from CEO Review)
+### 8. Sensor subscription error handling
+- **What:** Wrap insole sensor configuration in try/catch. On rejection (InvalidStateError), log warning and continue with available sensors.
+- **Why:** Device can reject sensor config if sensors are already active or unsupported. Prevents crash during insole setup.
+- **Effort:** S
+- **Depends on:** Phase 1c insole integration
 
-- **WebSpatial dropped** — incompatible with Three.js. Using WebXR only for PICO.
+## Resolved (from plan reviews)
+
+- ~~Update PLAN.md for WebSpatial removal~~ — Done. PLAN.md fully rewritten.
+- ~~HTTPS hosting + pre-hackathon deployment~~ — Added to PLAN.md pre-hackathon checklist.
+
+## Architecture Decisions (from CEO + Eng Reviews)
+
+- **Keep Next.js 16** — existing project has working BrilliantSole integration. Don't rebuild with Vite.
 - **Raw Three.js** — not R3F. React handles UI only. Easier backcountry-simulator port.
-- **Procedural terrain for physics** — World Labs splats are visual backdrop only. No GLB collision alignment issues.
+- **WebSpatial dropped** — incompatible with Three.js canvas (flattens to 2D panel). WebXR only for PICO.
+- **Procedural terrain for physics** — World Labs splats are visual backdrop only. No GLB collision alignment.
 - **100k splats default** — for PICO mobile GPU with stereo WebXR rendering.
-- **API key in client JS** — accepted risk for hackathon. Use .env + .gitignore.
-- **Vercel/Netlify deployment** — stable HTTPS URL for PICO browser.
-- **SparkJS** (@sparkjsdev/spark) — World Labs' official Three.js splat renderer.
+- **SparkJS** (`@sparkjsdev/spark`) — World Labs' official Three.js Gaussian splat renderer.
+- **Shared mutable ref** for input bridge — React hooks write insole state, game loop reads synchronously.
+- **Game code in `frontend/game/` and `frontend/renderer/`** — peers to existing `components/`, `hooks/`.
+- **Vercel deployment** — stable HTTPS URL for PICO browser.
+- **API key in client JS** — accepted risk for hackathon. Use `.env` + `.gitignore`.
+- **Dynamic import with `ssr: false`** for Three.js GameCanvas component.
+- **Ring buffer of ≤16 terrain chunks** — prevents OOM on PICO.
+- **≤200 particles** with billboard sprites — reduce/disable if FPS < 72 in WebXR.

@@ -10,29 +10,42 @@ interface HUDProps {
 export default function HUD({ state }: HUDProps) {
   if (!state || state.phase !== "playing") return null;
 
-  const speed = (state.player.speed * 3.6).toFixed(0); // m/s to km/h
-  const distance = (state.distance).toFixed(0);
-  const altitude = state.player.position.y.toFixed(1);
+  const speed = (state.player.speed * 3.6).toFixed(0);
+  const distance = state.distance.toFixed(0);
 
   return (
     <div className="fixed top-4 left-4 z-10 pointer-events-none select-none">
-      <div className="bg-black/40 backdrop-blur-sm rounded-xl px-5 py-3 text-white space-y-1">
-        <div className="text-3xl font-bold tabular-nums">
-          {speed} <span className="text-sm font-normal opacity-70">km/h</span>
+      <div className="glass rounded-2xl px-5 py-4 min-w-[140px] scanlines">
+        {/* Speed */}
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-4xl font-bold tabular-nums text-white tracking-tight">
+            {speed}
+          </span>
+          <span className="text-xs font-medium text-zinc-500 uppercase">km/h</span>
         </div>
-        <div className="text-sm opacity-70 tabular-nums">
-          {distance}m downhill
+
+        {/* Distance */}
+        <div className="text-sm text-zinc-400 tabular-nums mt-1">
+          {distance}<span className="text-zinc-600">m</span>
         </div>
-        <div className="text-sm opacity-70 tabular-nums">
-          alt {altitude}m
-        </div>
+
+        {/* Airborne */}
         {state.player.airborne && (
-          <div className="text-yellow-300 text-sm font-bold animate-pulse">
+          <div className="mt-2 px-2 py-0.5 bg-yellow-500/20 rounded-md text-yellow-400 text-xs font-bold tracking-wider text-center animate-pulse">
             AIRBORNE
           </div>
         )}
-        <div className={`text-xs ${inputState.source === "insole" ? "text-green-400" : "text-zinc-500"}`}>
-          {inputState.source === "insole" ? "Insole" : "Keyboard"}
+
+        {/* Input source */}
+        <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-white/5">
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${
+              inputState.source === "insole" ? "bg-green-400" : "bg-zinc-600"
+            }`}
+          />
+          <span className="text-[10px] text-zinc-500 uppercase tracking-wider">
+            {inputState.source === "insole" ? "Insole" : "Keyboard"}
+          </span>
         </div>
       </div>
     </div>

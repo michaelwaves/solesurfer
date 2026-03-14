@@ -4,31 +4,21 @@ import { useState, useEffect } from "react";
 import { useConnectedDevices } from "@/hooks/useDevices";
 import { connectInsoleAdapter, disconnectInsoleAdapter } from "@/input/insole-adapter";
 
-// Compact insole connection panel for the play page.
-// Shows connection status + connect button. Auto-bridges to game input.
-
 export default function InsolePanel() {
   const connectedDevices = useConnectedDevices();
   const [connecting, setConnecting] = useState(false);
   const [btSupported, setBtSupported] = useState(false);
 
-  // Check Bluetooth support on mount
   useEffect(() => {
-    import("brilliantsole/browser").then((BS) => {
-      setBtSupported(BS.Environment.isBluetoothSupported);
-    }).catch(() => {
-      setBtSupported(false);
-    });
+    import("brilliantsole/browser")
+      .then((BS) => setBtSupported(BS.Environment.isBluetoothSupported))
+      .catch(() => setBtSupported(false));
   }, []);
 
-  // Bridge: when devices connect/disconnect, update the insole adapter
   useEffect(() => {
     if (connectedDevices.length > 0) {
-      const device = connectedDevices[0];
-      const cleanup = connectInsoleAdapter(device);
-      return () => {
-        if (cleanup) cleanup();
-      };
+      const cleanup = connectInsoleAdapter(connectedDevices[0]);
+      return () => { if (cleanup) cleanup(); };
     } else {
       disconnectInsoleAdapter();
     }
@@ -55,27 +45,29 @@ export default function InsolePanel() {
       <button
         onClick={handleConnect}
         disabled={connecting}
-        className={`flex items-center gap-2 px-4 py-2 backdrop-blur-sm text-sm rounded-lg transition-colors ${
+        className={`glass flex items-center gap-2.5 px-4 py-2.5 text-sm rounded-xl transition-all ${
           isConnected
-            ? "bg-green-500/20 hover:bg-green-500/30 text-green-300 border border-green-500/30"
-            : "bg-white/10 hover:bg-white/20 text-white border border-white/10"
+            ? "border-green-500/20 text-green-300"
+            : connecting
+            ? "border-yellow-500/20 text-yellow-300"
+            : "text-zinc-400 hover:text-white hover:bg-white/10"
         }`}
       >
-        {/* Status dot */}
-        <span
-          className={`w-2 h-2 rounded-full ${
-            isConnected
-              ? "bg-green-400 animate-pulse"
-              : connecting
-              ? "bg-yellow-400 animate-pulse"
-              : "bg-zinc-500"
-          }`}
-        />
-        {connecting
-          ? "Connecting..."
-          : isConnected
-          ? `${deviceName} connected`
-          : "Connect Insole"}
+        <span className="relative flex h-2 w-2">
+          {(isConnected || connecting) && (
+            <span
+              className={`absolute inset-0 rounded-full animate-ping opacity-75 ${
+                isConnected ? "bg-green-400" : "bg-yellow-400"
+              }`}
+            />
+          )}
+          <span
+            className={`relative inline-flex rounded-full h-2 w-2 ${
+              isConnected ? "bg-green-400" : connecting ? "bg-yellow-400" : "bg-zinc-600"
+            }`}
+          />
+        </span>
+        {connecting ? "Connecting..." : isConnected ? deviceName : "Connect Insole"}
       </button>
     </div>
   );

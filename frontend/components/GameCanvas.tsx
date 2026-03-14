@@ -16,7 +16,6 @@ import { updatePhysics } from "@/game/physics";
 import { initKeyboardAdapter, pollKeyboard } from "@/input/keyboard-adapter";
 import { inputState } from "@/input/input-state";
 import { getTerrainHeight, setTerrainMode } from "@/game/terrain";
-import { useInsoleInput } from "@/hooks/useInsoleInput";
 
 interface GameCanvasProps {
   mode: GameMode;
@@ -37,8 +36,6 @@ export default function GameCanvas({
   const [error, setError] = useState<string | null>(null);
   const vrSessionRef = useRef<XRSession | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-
-  useInsoleInput();
 
   const init = useCallback(() => {
     const canvas = canvasRef.current;

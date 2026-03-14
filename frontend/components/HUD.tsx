@@ -1,6 +1,7 @@
 "use client";
 
 import { GameState } from "@/game/state";
+import { inputState } from "@/input/input-state";
 
 interface HUDProps {
   state: GameState | null;
@@ -30,6 +31,9 @@ export default function HUD({ state }: HUDProps) {
             AIRBORNE
           </div>
         )}
+        <div className={`text-xs ${inputState.source === "insole" ? "text-green-400" : "text-zinc-500"}`}>
+          {inputState.source === "insole" ? "Insole" : "Keyboard"}
+        </div>
       </div>
     </div>
   );

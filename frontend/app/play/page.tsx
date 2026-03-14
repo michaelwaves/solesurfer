@@ -6,6 +6,7 @@ import { GameState, GameMode } from "@/game/state";
 import { WorldScene, PRESET_SCENES, generateScene } from "@/lib/worldlabs";
 import HUD from "@/components/HUD";
 import DebugOverlay from "@/components/DebugOverlay";
+import InsolePanel from "@/components/InsolePanel";
 
 const GameCanvas = dynamic(() => import("@/components/GameCanvas"), {
   ssr: false,
@@ -272,6 +273,7 @@ export default function PlayPage() {
         </button>
       </div>
 
+      <InsolePanel />
       <div className="fixed bottom-4 left-4 z-10 text-white/40 text-xs pointer-events-none select-none">
         Press ` for debug | A/D to carve | Space to jump
       </div>

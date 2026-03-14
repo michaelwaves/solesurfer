@@ -8,11 +8,11 @@
 - **Effort:** S
 - **Depends on:** Phase 1b physics port
 
-### 2. Partial insole graceful degradation
-- **What:** If only one insole connects or one disconnects mid-session, use remaining insole for limited control rather than producing erratic input
-- **Why:** Bluetooth connections drop. One insole = tilt/lean only, fall back to keyboard for missing axes
+### 2. Insole disconnect graceful degradation
+- **What:** If the insole disconnects mid-session, fall back to keyboard seamlessly
+- **Why:** Bluetooth connections drop. Game should switch to keyboard without crashing or freezing.
 - **Effort:** S
-- **Depends on:** Phase 1c insole integration
+- **Depends on:** Phase 1c IMU integration
 
 ### 3. World Labs API error handling + procedural fallback
 - **What:** Wrap all World Labs API calls in try/catch. On any failure (401, 429, timeout, malformed): log error, show toast, fall back to procedural terrain
@@ -47,10 +47,10 @@
 - **Depends on:** Phase 1a project setup
 
 ### 8. Sensor subscription error handling
-- **What:** Wrap insole sensor configuration in try/catch. On rejection (InvalidStateError), log warning and continue with available sensors.
+- **What:** Wrap IMU orientation sensor configuration in try/catch. On rejection (InvalidStateError), log warning and fall back to keyboard.
 - **Why:** Device can reject sensor config if sensors are already active or unsupported. Prevents crash during insole setup.
 - **Effort:** S
-- **Depends on:** Phase 1c insole integration
+- **Depends on:** Phase 1c IMU integration
 
 ## Resolved (from plan reviews)
 

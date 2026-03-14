@@ -51,28 +51,27 @@
 - **Procedural terrain for physics** — World Labs splats are visual backdrop only. No GLB collision alignment.
 - **100k splats** — for PICO mobile GPU with stereo WebXR rendering.
 - **SparkJS** (`@sparkjsdev/spark`) — World Labs' official Three.js Gaussian splat renderer.
+- **IMU orientation only** — raw pitch/roll for controls. No pressure data needed. Simpler integration.
 - **Shared mutable ref** for input — React hooks write insole state, game loop reads synchronously at 60Hz.
 - **Vercel deployment** — stable HTTPS URL required for Web Bluetooth + WebXR.
 - **API key in client JS** — accepted risk for hackathon. Use `.env` + `.gitignore`.
 
 ## Input Mapping: BrilliantSole → Snowboard Controls
 
-| Insole Data | Game Action | How |
-|---|---|---|
-| Left insole pressure > Right | Turn left (toeside) | Pressure difference → edge angle |
-| Right insole pressure > Left | Turn right (heelside) | Pressure difference → edge angle |
-| Both insoles high pressure | Brake / pizza stop | Combined pressure sum → drag |
-| Both insoles low pressure | Tuck / speed boost | Low total pressure → reduced drag |
-| Sharp vertical acceleration (IMU) | Jump | `linearAcceleration.y` spike → jump trigger |
-| Gyroscope spin while airborne | Trick spin | `gyroscope.z` → spin rotation |
-| Center of pressure shift (toe/heel) | Forward/back lean | `pressureData.center.y` → weight distribution |
+**IMU orientation only** — uses raw pitch and roll from the insole's orientation sensor. No pressure data needed, simpler integration.
 
-### Partial Insole Degradation
+| IMU Data | Game Action | How |
+|---|---|---|
+| Roll (left/right tilt) | Turn left/right | Roll angle → edge angle → carve direction |
+| Pitch (forward/back tilt) | Speed control | Lean forward → tuck (less drag) / lean back → brake (more drag) |
+| Sharp vertical acceleration | Jump | `linearAcceleration.y` spike → jump trigger |
+| Roll while airborne | Trick spin | Roll angle → spin rotation |
+
+### Insole Degradation
 | State | Behavior |
 |---|---|
-| Both insoles connected | Full control (differential pressure + IMU) |
-| One insole connected | Tilt/lean from single insole, no differential turning. Keyboard supplements missing axes. |
-| No insoles connected | Full keyboard fallback (A/D/W/S/Space) |
+| Insole connected | Full IMU control (roll → turn, pitch → speed) |
+| No insole connected | Keyboard fallback (A/D → turn, W/S → speed, Space → jump) |
 
 ## Phased Build Plan (Layered — Each Phase is Demo-Ready)
 
@@ -95,7 +94,7 @@
       loop.ts             # Game loop (fixed timestep physics, vSync render)
     input/
       input-state.ts      # Shared mutable InputState ref
-      insole-adapter.ts   # Maps BS sensor data → InputState (extends existing hooks)
+      insole-adapter.ts   # Maps BS IMU orientation (pitch/roll) → InputState
       keyboard-adapter.ts # Maps keyboard → InputState (A/D/W/S/Space)
     renderer/
       scene.ts            # Three.js scene setup
@@ -122,19 +121,19 @@
 - **Critical:** Add NaN guard — if any position/velocity is NaN, reset to last known good state
 - **Test:** Physics runs headless with keyboard input, console-log position
 
-#### 1c. BrilliantSole Sensor Integration (~1.5hr)
+#### 1c. BrilliantSole IMU Integration (~1hr)
 - Create `insole-adapter.ts` that:
-  - Subscribes to sensor events on connected devices (pressure, linearAcceleration, gyroscope)
-  - Configure sensors: `pressure: 20ms`, `linearAcceleration: 20ms`, `gyroscope: 20ms`
-  - Maps sensor data → shared `InputState` ref:
-    - Pressure differential → `turnInput` (-1 to +1)
-    - Total pressure → `brakeInput` / `tuckInput`
-    - IMU vertical spike → `jumpInput` (debounced)
-    - Gyroscope Z → `trickSpin`
-  - Handles partial insole connection (one insole = degraded control)
+  - Subscribes to IMU orientation events on connected device
+  - Configure sensor: `orientation: 20ms`, `linearAcceleration: 20ms`
+  - Maps raw orientation → shared `InputState` ref:
+    - Roll (left/right tilt) → `turnInput` (-1 to +1)
+    - Pitch (forward/back tilt) → `speedInput` (-1 = brake, +1 = tuck)
+    - Vertical acceleration spike → `jumpInput` (debounced)
+    - Roll while airborne → `trickSpin`
+  - Apply deadzone (~5°) and smoothing to prevent jitter
 - Create `keyboard-adapter.ts` with same `InputState` interface
 - **Reuses:** Existing device connection/pairing UI — no changes needed
-- **Test:** Connect insoles, see mapped values in debug overlay
+- **Test:** Connect insole, see roll/pitch values in debug overlay
 
 #### 1d. Three.js Renderer (~3hr)
 - `GameCanvas.tsx`: dynamically imported with `next/dynamic` + `ssr: false`

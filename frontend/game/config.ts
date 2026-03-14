@@ -40,8 +40,9 @@ export const CONFIG = {
   fogFar: 300,
 
   // Input
-  inputDeadzone: 5,
-  inputSmoothing: 0.15,
+  inputDeadzone: 10,       // degrees — ignore tilt below this (was 5)
+  inputSmoothing: 0.08,    // lower = smoother/slower response (was 0.15)
+  inputMaxAngle: 45,       // degrees of tilt for full input (±1)
 
   // Physics timestep
   fixedDt: 1 / 60,

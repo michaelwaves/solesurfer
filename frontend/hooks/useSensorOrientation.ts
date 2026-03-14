@@ -35,7 +35,7 @@ export function useSensorOrientation() {
         if (event.message.sensorType !== "gameRotation") return;
         const q = event.message.gameRotation;
         const euler = quaternionToEuler(q);
-        setBoardRoll(euler.z);
+        setBoardRoll(-euler.z);
         setBoardPitch(euler.x);
         setBoardYaw(euler.y);
         setQuatRaw({ x: q.x, y: q.y, z: q.z, w: q.w });

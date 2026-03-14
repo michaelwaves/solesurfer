@@ -7,6 +7,7 @@ import { WorldScene, PRESET_SCENES, generateScene } from "@/lib/worldlabs";
 import HUD from "@/components/HUD";
 import DebugOverlay from "@/components/DebugOverlay";
 import InsolePanel from "@/components/InsolePanel";
+import IMUPanel from "@/components/IMUPanel";
 
 const GameCanvas = dynamic(() => import("@/components/GameCanvas"), {
   ssr: false,
@@ -292,6 +293,7 @@ export default function PlayPage() {
       </div>
 
       <InsolePanel />
+      <IMUPanel />
 
       <div className="fixed bottom-5 left-5 z-10 text-white/20 text-[10px] uppercase tracking-widest pointer-events-none select-none font-mono">
         ` debug &middot; A/D carve &middot; Space jump

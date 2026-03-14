@@ -13,6 +13,23 @@ let baselineRoll = 0;
 let baselinePitch = 0;
 let calibrated = false;
 
+// Raw IMU telemetry (readable by UI)
+export const imuTelemetry = {
+  rawRoll: 0,
+  rawPitch: 0,
+  rawYaw: 0,
+  adjRoll: 0,     // after baseline subtraction
+  adjPitch: 0,
+  baselineRoll: 0,
+  baselinePitch: 0,
+};
+
+// Sensitivity multipliers — adjustable at runtime
+export const imuSensitivity = {
+  roll: 1.0,   // turn amplification
+  pitch: 1.0,  // speed amplification
+};
+
 // Auto-calibration: average the first N samples to find "flat"
 const AUTO_CAL_SAMPLES = 30; // ~0.6s at 20ms rate
 let calSamples: { roll: number; pitch: number }[] = [];
@@ -62,7 +79,12 @@ export function connectInsoleAdapter(device: any) {
   }
 
   const onOrientation = (event: any) => {
-    const { pitch, roll } = event.message.orientation;
+    const { pitch, roll, heading } = event.message.orientation;
+
+    // Write raw telemetry (always, even during calibration)
+    imuTelemetry.rawRoll = roll;
+    imuTelemetry.rawPitch = pitch;
+    imuTelemetry.rawYaw = heading || 0;
 
     // Auto-calibration: collect samples then average for baseline
     if (!calibrated) {
@@ -71,21 +93,28 @@ export function connectInsoleAdapter(device: any) {
         baselineRoll = calSamples.reduce((s, v) => s + v.roll, 0) / calSamples.length;
         baselinePitch = calSamples.reduce((s, v) => s + v.pitch, 0) / calSamples.length;
         calibrated = true;
+        imuTelemetry.baselineRoll = baselineRoll;
+        imuTelemetry.baselinePitch = baselinePitch;
         console.log(`Insole calibrated — baseline roll: ${baselineRoll.toFixed(1)}°, pitch: ${baselinePitch.toFixed(1)}°`);
       }
-      return; // Don't send input during calibration
+      return;
     }
 
     // Subtract baseline so "flat" = zero
     const adjRoll = roll - baselineRoll;
     const adjPitch = pitch - baselinePitch;
+    imuTelemetry.adjRoll = adjRoll;
+    imuTelemetry.adjPitch = adjPitch;
 
-    // Apply deadzone and smoothing
-    const rawRoll = applyDeadzone(adjRoll, CONFIG.inputDeadzone);
-    const rawPitch = applyDeadzone(adjPitch, CONFIG.inputDeadzone);
+    // Apply sensitivity multiplier, deadzone, and smoothing
+    const scaledRoll = adjRoll * imuSensitivity.roll;
+    const scaledPitch = adjPitch * imuSensitivity.pitch;
 
-    smoothedRoll += (rawRoll - smoothedRoll) * CONFIG.inputSmoothing;
-    smoothedPitch += (rawPitch - smoothedPitch) * CONFIG.inputSmoothing;
+    const dzRoll = applyDeadzone(scaledRoll, CONFIG.inputDeadzone);
+    const dzPitch = applyDeadzone(scaledPitch, CONFIG.inputDeadzone);
+
+    smoothedRoll += (dzRoll - smoothedRoll) * CONFIG.inputSmoothing;
+    smoothedPitch += (dzPitch - smoothedPitch) * CONFIG.inputSmoothing;
 
     inputState.turnInput = clamp(smoothedRoll, -1, 1);
     inputState.speedInput = clamp(smoothedPitch, -1, 1);

@@ -20,6 +20,8 @@ const GameCanvas = dynamic(() => import("@/components/GameCanvas"), {
   ),
 });
 
+const GemGrabGame = dynamic(() => import("@/components/game/Game"), { ssr: false });
+
 type Screen = "mode" | "scene" | "playing";
 
 // ──────────────────────────────────────────
@@ -62,6 +64,19 @@ function ModeSelect({ onSelect }: { onSelect: (mode: GameMode) => void }) {
               <div className="font-semibold tracking-wide">Freeride</div>
               <div className="text-xs text-[#707278] mt-0.5 group-hover:text-[#707278]">
                 Open mountain — dodge trees, carve powder
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => onSelect("gem_grab")}
+            className="btn-outline-light w-full text-left px-6 py-5 flex items-center gap-5 group"
+          >
+            <span className="text-[#b44fff] font-bold text-xs tabular-nums">03</span>
+            <div>
+              <div className="font-semibold tracking-wide">Gem Grab</div>
+              <div className="text-xs text-[#707278] mt-0.5 group-hover:text-[#707278]">
+                Dodge obstacles, collect purple gems
               </div>
             </div>
           </button>
@@ -214,7 +229,11 @@ export default function PlayPage() {
     });
   }, []);
 
-  const handleModeSelect = (m: GameMode) => { setMode(m); setScreen("scene"); };
+  const handleModeSelect = (m: GameMode) => {
+    setMode(m);
+    // Gem Grab is self-contained — skip the World Labs scene picker
+    setScreen(m === "gem_grab" ? "playing" : "scene");
+  };
   const handleSceneSelect = (scene: WorldScene | null) => { setSceneUrl(scene?.spzUrl || undefined); setScreen("playing"); };
   const handleSkipScene = () => { setSceneUrl(undefined); setScreen("playing"); };
   const handleRestart = () => { setRestartKey((k) => k + 1); setGameState(null); };
@@ -229,6 +248,19 @@ export default function PlayPage() {
 
   if (screen === "mode") return <ModeSelect onSelect={handleModeSelect} />;
   if (screen === "scene") return <SceneSelect onSelect={handleSceneSelect} onSkip={handleSkipScene} onBack={() => setScreen("mode")} />;
+
+  if (mode === "gem_grab") {
+    return (
+      <>
+        <GemGrabGame />
+        <div className="fixed top-5 right-5 z-10">
+          <button onClick={handleChangeMode} className="btn-outline-light px-4 py-2 text-xs uppercase tracking-widest font-medium">
+            Menu
+          </button>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

@@ -21,18 +21,32 @@ type CoinData = {
 
 let idCounter = 0;
 
-function Coin() {
+function Gem() {
   return (
     <group>
-      {/* Flat torus = coin ring */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
-        <torusGeometry args={[0.3, 0.08, 8, 20]} />
-        <meshStandardMaterial color="#ffd700" emissive="#ffaa00" emissiveIntensity={0.4} metalness={0.8} roughness={0.2} />
+      {/* Main gem body — octahedron like a cut diamond */}
+      <mesh castShadow>
+        <octahedronGeometry args={[0.35, 0]} />
+        <meshStandardMaterial
+          color="#b44fff"
+          emissive="#6a0dad"
+          emissiveIntensity={0.6}
+          metalness={0.1}
+          roughness={0.05}
+          transparent
+          opacity={0.88}
+        />
       </mesh>
-      {/* Coin face */}
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.22, 20]} />
-        <meshStandardMaterial color="#ffe033" emissive="#ff9900" emissiveIntensity={0.3} />
+      {/* Inner glow core */}
+      <mesh>
+        <octahedronGeometry args={[0.18, 0]} />
+        <meshStandardMaterial
+          color="#e0aaff"
+          emissive="#cc88ff"
+          emissiveIntensity={1.2}
+          transparent
+          opacity={0.5}
+        />
       </mesh>
     </group>
   );
@@ -116,7 +130,7 @@ export default function Collectibles() {
           ref={coin.ref as React.RefObject<THREE.Group>}
           position={[coin.x, 0.5, coin.z]}
         >
-          <Coin />
+          <Gem />
         </group>
       ))}
     </>

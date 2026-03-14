@@ -1,5 +1,5 @@
 export type GamePhase = "menu" | "connecting" | "loading" | "playing" | "paused";
-export type GameMode = "halfpipe" | "freeride";
+export type GameMode = "halfpipe" | "freeride" | "gem_grab";
 
 // Valid state transitions — any transition not listed here is invalid
 //

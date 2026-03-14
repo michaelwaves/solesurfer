@@ -1,26 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import BluetoothClientWrapper from "@/components/brilliantsole/BluetoothClientWrapper";
-import AddDeviceButton from "@/components/brilliantsole/bluetooth/AddDeviceButton";
-import AvailableDevicesGrid from "@/components/brilliantsole/availableDevices/AvailableDevicesGrid";
-import { useConnectedDevices } from "@/hooks/useDevices";
+import dynamic from "next/dynamic";
 
-function StartButton() {
-  const connected = useConnectedDevices();
-  const hasDevices = connected.length > 0;
-
-  return (
-    <Link
-      href="/play"
-      className="btn-red block w-full text-center px-8 py-4 rounded-none font-medium text-base tracking-wide uppercase"
-    >
-      {hasDevices
-        ? `Drop In — ${connected.length} insole${connected.length > 1 ? "s" : ""} connected`
-        : "Drop In"}
-    </Link>
-  );
-}
+const InsoleSection = dynamic(() => import("@/components/InsoleSection"), {
+  ssr: false,
+  loading: () => (
+    <p className="text-sm text-[#707278]">Checking Bluetooth...</p>
+  ),
+});
 
 export default function Home() {
   return (
@@ -54,19 +42,16 @@ export default function Home() {
               snowboarding. Or use keyboard controls — your call.
             </p>
 
-            <BluetoothClientWrapper
-              suspense={
-                <p className="text-sm text-[#707278]">Checking Bluetooth...</p>
-              }
-              notSupported={null}
-            >
-              <div className="flex flex-col gap-4 mb-8">
-                <AddDeviceButton />
-                <AvailableDevicesGrid />
-              </div>
-            </BluetoothClientWrapper>
+            <div className="mb-8">
+              <InsoleSection />
+            </div>
 
-            <StartButton />
+            <Link
+              href="/play"
+              className="btn-red block w-full text-center px-8 py-4 rounded-none font-medium text-base tracking-wide uppercase no-underline"
+            >
+              Drop In
+            </Link>
           </div>
 
           {/* Right: How it works */}

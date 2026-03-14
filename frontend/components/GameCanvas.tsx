@@ -1,107 +1,113 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import * as THREE from "three";
 import { createScene, createRenderer } from "@/renderer/scene";
 import { createCamera, updateCamera, handleResize } from "@/renderer/camera";
 import { createCharacter, updateCharacter } from "@/renderer/character";
 import { TerrainChunkManager } from "@/renderer/chunks";
 import { SnowParticles } from "@/renderer/particles";
-import { createGameState, GameState } from "@/game/state";
+import { createGameState, GameState, GameMode } from "@/game/state";
 import { createGameLoop } from "@/game/loop";
 import { initKeyboardAdapter } from "@/input/keyboard-adapter";
-import { getTerrainHeight } from "@/game/terrain";
+import { getTerrainHeight, setTerrainMode } from "@/game/terrain";
 import { useInsoleInput } from "@/hooks/useInsoleInput";
 
 interface GameCanvasProps {
+  mode: GameMode;
   onStateUpdate?: (state: GameState) => void;
+  restartKey?: number;
 }
 
-export default function GameCanvas({ onStateUpdate }: GameCanvasProps) {
+export default function GameCanvas({ mode, onStateUpdate, restartKey }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const gameRef = useRef<ReturnType<typeof createGameLoop> | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Bridge: auto-connects insole IMU when a BrilliantSole device is connected
   useInsoleInput();
 
   const init = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Three.js setup
-    const scene = createScene();
-    const renderer = createRenderer(canvas);
-    const camera = createCamera();
+    try {
+      const testCtx = canvas.getContext("webgl2") || canvas.getContext("webgl");
+      if (!testCtx) {
+        setError("WebGL is not supported in this browser. Please use Chrome, Firefox, or Edge.");
+        return;
+      }
 
-    // Character
-    const character = createCharacter();
-    scene.add(character);
+      // Set terrain mode before anything generates terrain
+      setTerrainMode(mode);
 
-    // Terrain chunks
-    const chunkManager = new TerrainChunkManager(scene);
+      const scene = createScene();
+      const renderer = createRenderer(canvas);
+      const camera = createCamera();
 
-    // Particles
-    const snowParticles = new SnowParticles(scene);
+      const character = createCharacter();
+      scene.add(character);
 
-    // Game state
-    const state = createGameState();
-    state.phase = "playing";
+      const chunkManager = new TerrainChunkManager(scene);
+      const snowParticles = new SnowParticles(scene);
 
-    // Set initial player height to terrain
-    state.player.position.y = getTerrainHeight(0, 0);
+      const state = createGameState();
+      state.phase = "playing";
+      state.player.position.y = getTerrainHeight(0, 0);
+      state.player.velocity.z = -5;
 
-    // Give initial downhill velocity so the player starts moving
-    state.player.velocity.z = -2;
+      const cleanupKeyboard = initKeyboardAdapter();
 
-    // Keyboard input
-    const cleanupKeyboard = initKeyboardAdapter();
+      const onRender = (gameState: GameState, dt: number) => {
+        chunkManager.update(gameState.player.position.z);
+        updateCharacter(character, gameState.player);
+        updateCamera(camera, gameState.player);
+        snowParticles.update(gameState.player, dt);
+        renderer.render(scene, camera);
+        onStateUpdate?.(gameState);
+      };
 
-    // Render callback
-    const onRender = (gameState: GameState, dt: number) => {
-      // Update terrain chunks
-      chunkManager.update(gameState.player.position.z);
+      const loop = createGameLoop(state, onRender);
+      loop.start();
 
-      // Update character mesh
-      updateCharacter(character, gameState.player);
+      const onResize = () => handleResize(camera, renderer);
+      window.addEventListener("resize", onResize);
 
-      // Update camera
-      updateCamera(camera, gameState.player);
-
-      // Update particles
-      snowParticles.update(gameState.player, dt);
-
-      // Render
-      renderer.render(scene, camera);
-
-      // Notify parent of state update
-      onStateUpdate?.(gameState);
-    };
-
-    // Create and start game loop
-    const loop = createGameLoop(state, onRender);
-    gameRef.current = loop;
-    loop.start();
-
-    // Resize handler
-    const onResize = () => handleResize(camera, renderer);
-    window.addEventListener("resize", onResize);
-
-    // Cleanup
-    return () => {
-      loop.stop();
-      cleanupKeyboard();
-      window.removeEventListener("resize", onResize);
-      chunkManager.dispose();
-      snowParticles.dispose();
-      renderer.dispose();
-      scene.clear();
-    };
-  }, [onStateUpdate]);
+      return () => {
+        loop.stop();
+        cleanupKeyboard();
+        window.removeEventListener("resize", onResize);
+        chunkManager.dispose();
+        snowParticles.dispose();
+        renderer.dispose();
+        scene.clear();
+      };
+    } catch (e) {
+      console.error("Failed to initialize game:", e);
+      setError(`Failed to initialize game engine: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }, [mode, onStateUpdate, restartKey]);
 
   useEffect(() => {
+    setError(null);
     const cleanup = init();
     return cleanup;
   }, [init]);
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-zinc-900 flex items-center justify-center">
+        <div className="text-center text-white max-w-md px-6">
+          <p className="text-2xl font-bold mb-4">Unable to Start Game</p>
+          <p className="text-zinc-400 mb-6">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

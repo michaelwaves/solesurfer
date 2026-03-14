@@ -1,4 +1,5 @@
 export type GamePhase = "menu" | "connecting" | "loading" | "playing" | "paused";
+export type GameMode = "halfpipe" | "freeride";
 
 export interface Vec3 {
   x: number;

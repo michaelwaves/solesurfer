@@ -29,15 +29,12 @@ export function pollKeyboard() {
   if (inputState.source === "insole") return;
 
   let turn = 0;
-  let speed = 0;
 
   if (keys["a"] || keys["arrowleft"]) turn -= 1;
   if (keys["d"] || keys["arrowright"]) turn += 1;
-  if (keys["w"] || keys["arrowup"]) speed += 1;
-  if (keys["s"] || keys["arrowdown"]) speed -= 1;
 
   inputState.turnInput = turn;
-  inputState.speedInput = speed;
+  inputState.speedInput = 0; // no separate speed control — carving IS braking
   inputState.jumpInput = keys[" "] || false;
   inputState.trickSpin = 0;
   inputState.source = "keyboard";

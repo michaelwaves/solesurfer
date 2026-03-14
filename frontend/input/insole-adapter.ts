@@ -8,6 +8,15 @@ let lastJumpTime = 0;
 let smoothedRoll = 0;
 let smoothedPitch = 0;
 
+// Calibration baseline — captured when user stands flat
+let baselineRoll = 0;
+let baselinePitch = 0;
+let calibrated = false;
+
+// Auto-calibration: average the first N samples to find "flat"
+const AUTO_CAL_SAMPLES = 30; // ~0.6s at 20ms rate
+let calSamples: { roll: number; pitch: number }[] = [];
+
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
 }
@@ -18,12 +27,31 @@ function applyDeadzone(value: number, deadzone: number): number {
   return sign * ((Math.abs(value) - deadzone) / (90 - deadzone));
 }
 
+// Manual recalibrate — call this when the user is standing flat
+export function calibrateInsole() {
+  calSamples = [];
+  calibrated = false;
+  smoothedRoll = 0;
+  smoothedPitch = 0;
+  console.log("Insole calibration started — stand flat for ~0.5s");
+}
+
+export function isCalibrated(): boolean {
+  return calibrated;
+}
+
 export function connectInsoleAdapter(device: any) {
-  // Clean up previous connection
   if (cleanup) cleanup();
 
+  // Reset calibration on new connection
+  calSamples = [];
+  calibrated = false;
+  baselineRoll = 0;
+  baselinePitch = 0;
+  smoothedRoll = 0;
+  smoothedPitch = 0;
+
   try {
-    // Enable orientation + linearAcceleration sensors at 20ms
     device.setSensorConfiguration({
       orientation: 20,
       linearAcceleration: 20,
@@ -36,9 +64,25 @@ export function connectInsoleAdapter(device: any) {
   const onOrientation = (event: any) => {
     const { pitch, roll } = event.message.orientation;
 
+    // Auto-calibration: collect samples then average for baseline
+    if (!calibrated) {
+      calSamples.push({ roll, pitch });
+      if (calSamples.length >= AUTO_CAL_SAMPLES) {
+        baselineRoll = calSamples.reduce((s, v) => s + v.roll, 0) / calSamples.length;
+        baselinePitch = calSamples.reduce((s, v) => s + v.pitch, 0) / calSamples.length;
+        calibrated = true;
+        console.log(`Insole calibrated — baseline roll: ${baselineRoll.toFixed(1)}°, pitch: ${baselinePitch.toFixed(1)}°`);
+      }
+      return; // Don't send input during calibration
+    }
+
+    // Subtract baseline so "flat" = zero
+    const adjRoll = roll - baselineRoll;
+    const adjPitch = pitch - baselinePitch;
+
     // Apply deadzone and smoothing
-    const rawRoll = applyDeadzone(roll, CONFIG.inputDeadzone);
-    const rawPitch = applyDeadzone(pitch, CONFIG.inputDeadzone);
+    const rawRoll = applyDeadzone(adjRoll, CONFIG.inputDeadzone);
+    const rawPitch = applyDeadzone(adjPitch, CONFIG.inputDeadzone);
 
     smoothedRoll += (rawRoll - smoothedRoll) * CONFIG.inputSmoothing;
     smoothedPitch += (rawPitch - smoothedPitch) * CONFIG.inputSmoothing;
@@ -49,14 +93,14 @@ export function connectInsoleAdapter(device: any) {
   };
 
   const onLinearAcceleration = (event: any) => {
+    if (!calibrated) return; // Skip during calibration
+
     const { y } = event.message.linearAcceleration;
     const now = performance.now();
 
-    // Detect jump: vertical acceleration spike with cooldown
     if (Math.abs(y) > CONFIG.accelJumpThreshold && now - lastJumpTime > CONFIG.jumpCooldown) {
       inputState.jumpInput = true;
       lastJumpTime = now;
-      // Auto-clear jump after one frame
       requestAnimationFrame(() => {
         inputState.jumpInput = false;
       });
@@ -79,9 +123,9 @@ export function connectInsoleAdapter(device: any) {
 }
 
 export function disconnectInsoleAdapter() {
-  if (cleanup) {
-    cleanup();
-  }
+  if (cleanup) cleanup();
   smoothedRoll = 0;
   smoothedPitch = 0;
+  calibrated = false;
+  calSamples = [];
 }

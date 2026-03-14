@@ -7,6 +7,7 @@ import { createCamera, updateCamera, handleResize } from "@/renderer/camera";
 import { createCharacter, updateCharacter } from "@/renderer/character";
 import { TerrainChunkManager } from "@/renderer/chunks";
 import { SnowParticles } from "@/renderer/particles";
+import { SplatScene } from "@/renderer/splats";
 import { createGameState, GameState, GameMode } from "@/game/state";
 import { createGameLoop } from "@/game/loop";
 import { initKeyboardAdapter } from "@/input/keyboard-adapter";
@@ -15,11 +16,12 @@ import { useInsoleInput } from "@/hooks/useInsoleInput";
 
 interface GameCanvasProps {
   mode: GameMode;
+  sceneUrl?: string;
   onStateUpdate?: (state: GameState) => void;
   restartKey?: number;
 }
 
-export default function GameCanvas({ mode, onStateUpdate, restartKey }: GameCanvasProps) {
+export default function GameCanvas({ mode, sceneUrl, onStateUpdate, restartKey }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +38,6 @@ export default function GameCanvas({ mode, onStateUpdate, restartKey }: GameCanv
         return;
       }
 
-      // Set terrain mode before anything generates terrain
       setTerrainMode(mode);
 
       const scene = createScene();
@@ -48,6 +49,15 @@ export default function GameCanvas({ mode, onStateUpdate, restartKey }: GameCanv
 
       const chunkManager = new TerrainChunkManager(scene);
       const snowParticles = new SnowParticles(scene);
+
+      // Load World Labs splat backdrop if URL is provided
+      const splatScene = new SplatScene(scene);
+      if (sceneUrl) {
+        splatScene.load(sceneUrl).then((ok) => {
+          if (ok) console.log("Splat scene loaded");
+          else console.warn("Splat scene failed to load, using procedural backdrop");
+        });
+      }
 
       const state = createGameState();
       state.phase = "playing";
@@ -77,6 +87,7 @@ export default function GameCanvas({ mode, onStateUpdate, restartKey }: GameCanv
         window.removeEventListener("resize", onResize);
         chunkManager.dispose();
         snowParticles.dispose();
+        splatScene.dispose();
         renderer.dispose();
         scene.clear();
       };
@@ -84,7 +95,7 @@ export default function GameCanvas({ mode, onStateUpdate, restartKey }: GameCanv
       console.error("Failed to initialize game:", e);
       setError(`Failed to initialize game engine: ${e instanceof Error ? e.message : String(e)}`);
     }
-  }, [mode, onStateUpdate, restartKey]);
+  }, [mode, sceneUrl, onStateUpdate, restartKey]);
 
   useEffect(() => {
     setError(null);

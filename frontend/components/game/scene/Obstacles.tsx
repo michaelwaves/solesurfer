@@ -22,6 +22,7 @@ type ObstacleData = {
   z: number;
   type: "tree" | "rock";
   radius: number;
+  scale: number;
   ref: React.RefObject<THREE.Group | null>;
 };
 
@@ -57,7 +58,7 @@ const PINE_MAT = new THREE.MeshStandardMaterial({
   metalness: 0.0,
 });
 
-function Tree() {
+function Tree({ scale }: { scale: number }) {
   const { scene } = useGLTF("/pine.glb");
   const cloned = useMemo(() => {
     const clone = scene.clone(true);
@@ -69,7 +70,7 @@ function Tree() {
     });
     return clone;
   }, [scene]);
-  return <primitive object={cloned} />;
+  return <primitive object={cloned} scale={scale} />;
 }
 
 useGLTF.preload("/pine.glb");
@@ -197,6 +198,7 @@ export default function Obstacles() {
       z: SPAWN_Z,
       type,
       radius: 0.55,
+      scale: type === "tree" ? 2.5 + Math.random() * 1.5 : 1,
       ref: { current: null } as React.RefObject<THREE.Group | null>,
     };
     obstaclesRef.current = [...obstaclesRef.current, obs];
@@ -281,7 +283,7 @@ export default function Obstacles() {
           position={[obs.x, 0, obs.z]}
           onClick={(e) => { e.stopPropagation(); shoot(obs); }}
         >
-          {obs.type === "tree" ? <Tree /> : <Rock />}
+          {obs.type === "tree" ? <Tree scale={obs.scale} /> : <Rock />}
           <ClickCatcher />
         </group>
       ))}

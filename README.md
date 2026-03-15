@@ -47,6 +47,12 @@ cd frontend
 npx vercel
 ```
 
+Alternatively: use ngrok to open a tunnel from localhost and expose the port your server is running on to the internet
+```bash
+ngrok config add-authtoken your-auth-token
+ngrok http 3000
+```
+
 ### Controls
 
 | Input | Action |

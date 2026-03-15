@@ -28,7 +28,7 @@ type Screen = "mode" | "scene" | "playing";
 // ──────────────────────────────────────────
 // MODE SELECT
 // ──────────────────────────────────────────
-function ModeSelect({ onSelect }: { onSelect: (mode: GameMode) => void }) {
+function ModeSelect({ onSelect, onSelectVR }: { onSelect: (mode: GameMode) => void; onSelectVR: () => void }) {
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
       <div className="max-w-md w-full px-6">
@@ -78,6 +78,19 @@ function ModeSelect({ onSelect }: { onSelect: (mode: GameMode) => void }) {
               <div className="font-semibold tracking-wide">Gem Grab</div>
               <div className="text-xs text-[#707278] mt-0.5 group-hover:text-[#707278]">
                 Dodge obstacles, collect purple gems
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={onSelectVR}
+            className="btn-outline-light w-full text-left px-6 py-5 flex items-center gap-5 group border-cyan-500/30"
+          >
+            <span className="text-cyan-400 font-bold text-xs tabular-nums">VR</span>
+            <div>
+              <div className="font-semibold tracking-wide">Immersive Mode</div>
+              <div className="text-xs text-[#707278] mt-0.5 group-hover:text-[#707278]">
+                WebXR headset — freeride in VR
               </div>
             </div>
           </button>
@@ -251,6 +264,7 @@ export default function PlayPage() {
   const [restartKey, setRestartKey] = useState(0);
   const [vrSupported, setVrSupported] = useState(false);
   const [vrActive, setVrActive] = useState(false);
+  const [autoEnterVR, setAutoEnterVR] = useState(false);
 
   const handleStateUpdate = useCallback((state: GameState) => {
     setGameState((prev) => {
@@ -270,8 +284,15 @@ export default function PlayPage() {
 
   const handleModeSelect = (m: GameMode) => {
     setMode(m);
+    setAutoEnterVR(false);
     // Gem Grab is self-contained — skip the World Labs scene picker
     setScreen(m === "gem_grab" ? "playing" : "scene");
+  };
+
+  const handleSelectVR = () => {
+    setMode("freeride");
+    setAutoEnterVR(true);
+    setScreen("playing");
   };
   const handleSceneSelect = (scene: WorldScene | null) => { setSceneUrl(scene?.spzUrl || undefined); setScreen("playing"); };
   const handleSkipScene = () => { setSceneUrl(undefined); setScreen("playing"); };
@@ -285,7 +306,24 @@ export default function PlayPage() {
     else { renderer.__enterVR?.(); setVrActive(true); }
   };
 
-  if (screen === "mode") return <ModeSelect onSelect={handleModeSelect} />;
+  // Auto-enter VR once the canvas renderer is available
+  useEffect(() => {
+    if (!autoEnterVR || screen !== "playing") return;
+    // Poll for the renderer to be ready (canvas mounts async)
+    const interval = setInterval(() => {
+      const canvas = document.getElementById("game-canvas") as any;
+      const renderer = canvas?.__getRenderer?.();
+      if (renderer) {
+        clearInterval(interval);
+        renderer.__enterVR?.();
+        setVrActive(true);
+        setAutoEnterVR(false);
+      }
+    }, 200);
+    return () => clearInterval(interval);
+  }, [autoEnterVR, screen]);
+
+  if (screen === "mode") return <ModeSelect onSelect={handleModeSelect} onSelectVR={handleSelectVR} />;
   if (screen === "scene") return <SceneSelect onSelect={handleSceneSelect} onSkip={handleSkipScene} onBack={() => setScreen("mode")} />;
 
   if (mode === "gem_grab") {

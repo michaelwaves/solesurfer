@@ -2,7 +2,7 @@ export const CONFIG = {
   // Physics — realistic values
   gravity: 9.81,              // m/s² (real gravity)
   maxSpeed: 25,               // m/s = 90 km/h terminal velocity
-  slopeGrade: 0.45,           // tangent of slope angle (~24°, steep blue/black run)
+  slopeGrade: 0.15,           // tangent of slope angle (~8.5°, gentle groomed run)
 
   // Sidecut carving — based on real board geometry
   sidecutRadius: 7,           // meters (real boards: 7-9m)
@@ -29,15 +29,15 @@ export const CONFIG = {
   // Terrain
   chunkSize: 50,
   chunkSegments: 32,
-  maxChunks: 16,
+  maxChunks: 64,
 
   // Rendering
   maxParticles: 200,
   cameraDistance: 12,
-  cameraHeight: 8,
+  cameraHeight: 5,
   cameraLerp: 0.06,
-  fogNear: 50,
-  fogFar: 300,
+  fogNear: 500,
+  fogFar: 3000,
 
   // Input
   inputDeadzone: 10,       // degrees — ignore tilt below this (was 5)

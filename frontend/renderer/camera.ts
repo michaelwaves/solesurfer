@@ -8,7 +8,7 @@ export function createCamera() {
     70,
     window.innerWidth / window.innerHeight,
     0.1,
-    CONFIG.fogFar + 50
+    5000
   );
   return camera;
 }
@@ -46,8 +46,8 @@ export function updateCamera(camera: THREE.PerspectiveCamera, player: PlayerStat
 
     _cameraTarget.set(
       player.position.x,
-      player.position.y + 1,
-      player.position.z
+      player.position.y,
+      player.position.z - 15
     );
     camera.lookAt(_cameraTarget);
   }

@@ -1,11 +1,37 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useGameStore } from "@/store/useGameStore";
 import AddDeviceButton from "@/components/brilliantsole/bluetooth/AddDeviceButton";
 import BluetoothClientWrapper from "@/components/brilliantsole/BluetoothClientWrapper";
+import { recalibrateGemGrab, isGemGrabCalibrated } from "@/hooks/useSensorOrientation";
 
 function r(n: number) {
   return n.toFixed(3).padStart(7);
+}
+
+function RecalibrateButton() {
+  const [calState, setCalState] = useState<"ready" | "calibrating">("ready");
+
+  const handleRecalibrate = () => {
+    recalibrateGemGrab();
+    setCalState("calibrating");
+    const interval = setInterval(() => {
+      if (isGemGrabCalibrated()) {
+        setCalState("ready");
+        clearInterval(interval);
+      }
+    }, 100);
+  };
+
+  return (
+    <button
+      onClick={handleRecalibrate}
+      className="pointer-events-auto rounded-lg bg-black/40 px-3 py-1.5 text-xs uppercase tracking-widest text-zinc-400 backdrop-blur hover:text-white transition-colors"
+    >
+      {calState === "calibrating" ? "Calibrating..." : "Recalibrate"}
+    </button>
+  );
 }
 
 export default function HUD() {
@@ -43,7 +69,10 @@ export default function HUD() {
       </div>
 
       {/* Device status — top right */}
-      <div className="absolute right-4 top-4">
+      <div className="absolute right-4 top-4 flex gap-2">
+        {deviceConnected && (
+          <RecalibrateButton />
+        )}
         {deviceConnected ? (
           <div className="flex items-center gap-1.5 rounded-lg bg-black/40 px-3 py-1.5 text-sm text-white backdrop-blur">
             <span className="inline-block size-2 rounded-full bg-green-400" />

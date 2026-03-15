@@ -17,6 +17,25 @@ function quaternionToEuler(q: { x: number; y: number; z: number; w: number }) {
   return tempE; // .x=pitch, .y=yaw, .z=roll
 }
 
+// Calibration state
+const AUTO_CAL_SAMPLES = 30; // ~0.6s at 20ms rate
+let calSamples: { roll: number; pitch: number }[] = [];
+let baselineRoll = 0;
+let baselinePitch = 0;
+let calibrated = false;
+
+export function isGemGrabCalibrated(): boolean {
+  return calibrated;
+}
+
+export function recalibrateGemGrab() {
+  calSamples = [];
+  calibrated = false;
+  baselineRoll = 0;
+  baselinePitch = 0;
+  console.log("Gem Grab recalibration started — stand flat for ~0.5s");
+}
+
 export function useSensorOrientation() {
   const { setBoardRoll, setBoardPitch, setBoardYaw, setQuatRaw, setDeviceConnected } =
     useGameStore.getState();
@@ -28,6 +47,11 @@ export function useSensorOrientation() {
     const attach = (device: Device) => {
       currentDevice = device;
       setDeviceConnected(true);
+      // Reset calibration on new connection
+      calSamples = [];
+      calibrated = false;
+      baselineRoll = 0;
+      baselinePitch = 0;
       // request gameRotation at 20 Hz
       device.setSensorConfiguration({ gameRotation: 20 });
 
@@ -35,10 +59,26 @@ export function useSensorOrientation() {
         if (event.message.sensorType !== "gameRotation") return;
         const q = event.message.gameRotation;
         const euler = quaternionToEuler(q);
-        setBoardRoll(-euler.z);
-        setBoardPitch(euler.x);
-        setBoardYaw(euler.y);
         setQuatRaw({ x: q.x, y: q.y, z: q.z, w: q.w });
+
+        const rawRoll = -euler.z;
+        const rawPitch = euler.x;
+
+        // Auto-calibration: average first N samples as baseline
+        if (!calibrated) {
+          calSamples.push({ roll: rawRoll, pitch: rawPitch });
+          if (calSamples.length >= AUTO_CAL_SAMPLES) {
+            baselineRoll = calSamples.reduce((s, v) => s + v.roll, 0) / calSamples.length;
+            baselinePitch = calSamples.reduce((s, v) => s + v.pitch, 0) / calSamples.length;
+            calibrated = true;
+            console.log(`Gem Grab calibrated — baseline roll: ${baselineRoll.toFixed(3)}, pitch: ${baselinePitch.toFixed(3)}`);
+          }
+          return;
+        }
+
+        setBoardRoll(rawRoll - baselineRoll);
+        setBoardPitch(rawPitch - baselinePitch);
+        setBoardYaw(euler.y);
       };
       device.addEventListener("sensorData", sensorHandler);
     };
@@ -55,6 +95,8 @@ export function useSensorOrientation() {
       setBoardPitch(0);
       setBoardYaw(0);
       setQuatRaw({ x: 0, y: 0, z: 0, w: 1 });
+      calSamples = [];
+      calibrated = false;
     };
 
     const onConnectedDevices = () => {

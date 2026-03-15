@@ -74,11 +74,18 @@ export default function GameCanvas({
       window.addEventListener("keydown", initSound);
       window.addEventListener("click", initSound);
 
-      // Splat backdrop
-      const splatScene = new SplatScene(scene);
+      // Splat environment
+      const splatScene = new SplatScene(scene, renderer);
       if (sceneUrl) {
         splatScene.load(sceneUrl).then((ok) => {
-          if (ok) console.log("Splat scene loaded");
+          if (ok) {
+            // Push fog back so it doesn't wash out the splat
+            if (scene.fog instanceof THREE.Fog) {
+              scene.fog.near = 200;
+              scene.fog.far = 800;
+            }
+            console.log("Splat scene loaded");
+          }
         });
       }
 
@@ -135,6 +142,7 @@ export default function GameCanvas({
         chunkManager.update(state.player.position.z);
         updateCharacter(character, state.player);
         updateCamera(camera, state.player);
+        splatScene.update(camera);
         snowParticles.update(state.player, rawDt);
         speedLines.update(state.player, camera, rawDt);
         sound.update(state.player);

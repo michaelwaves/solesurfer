@@ -75,9 +75,15 @@ export default function IMUPanel() {
         {/* Input bars */}
         <div className="space-y-1 pt-1 border-t border-white/5">
           <Bar value={inputState.turnInput} label="Turn" color="#e63946" />
+          <Bar value={inputState.speedInput} label="Brake" color="#ff9900" />
         </div>
-        <div className="text-[10px] text-[#707278] mt-1">
-          Pitch → Turn (lean forward/back to steer)
+        <div className="flex gap-3 text-[10px] mt-1">
+          <span className={inputState.jumpInput ? "text-green-400 font-bold" : "text-[#707278]"}>
+            Jump: {inputState.jumpInput ? "YES" : "no"}
+          </span>
+          <span className={inputState.speedInput < 0 ? "text-orange-400 font-bold" : "text-[#707278]"}>
+            Brake: {inputState.speedInput < 0 ? "YES" : "no"}
+          </span>
         </div>
 
         {/* Sensitivity sliders */}

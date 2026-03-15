@@ -219,6 +219,15 @@ export function updatePhysics(player: PlayerState, input: InputState, dt: number
       player.velocity.z -= vLateralZ * (1 - lateralFactor);
     }
 
+    // Braking — speedInput < 0 applies extra friction
+    if (input.speedInput < 0 && player.speed > 0.1) {
+      const brakeStrength = 8; // m/s² max brake deceleration
+      const brakeDecel = -input.speedInput * brakeStrength;
+      const brakeFactor = Math.max(0, 1 - (brakeDecel * dt) / player.speed);
+      player.velocity.x *= brakeFactor;
+      player.velocity.z *= brakeFactor;
+    }
+
     // Aerodynamic drag
     if (player.speed > 0.5) {
       const dragForce = 0.5 * CONFIG.airDensity * player.speed * player.speed
@@ -237,15 +246,6 @@ export function updatePhysics(player: PlayerState, input: InputState, dt: number
       player.airborne = true;
     }
 
-    // 6. TERRAIN LAUNCH — natural bumps launch the player at speed
-    if (player.speed > 5) {
-      const slopeChangeRate = (terrainAheadY - terrainY) / (dt * 3 + 0.001);
-      // If terrain drops away sharply ahead, launch the player
-      if (slopeChangeRate < -player.speed * 0.3) {
-        player.velocity.y = Math.abs(slopeChangeRate) * 0.15;
-        player.airborne = true;
-      }
-    }
   }
 
   // === UPDATE POSITION ===

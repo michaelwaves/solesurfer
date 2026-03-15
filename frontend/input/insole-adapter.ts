@@ -107,7 +107,6 @@ export function connectInsoleAdapter(device: any) {
     // Also request linearAcceleration for jump detection.
     device.setSensorConfiguration({
       gameRotation: 20,
-      linearAcceleration: 20,
     });
   } catch (e) {
     console.warn("Failed to configure insole sensors:", e);
@@ -146,32 +145,34 @@ export function connectInsoleAdapter(device: any) {
       imuTelemetry.adjRoll = adjRoll;
       imuTelemetry.adjPitch = adjPitch;
 
-      // Pitch = turn (lean forward/back to steer left/right)
-      // This matches Gem Grab's approach — pitch is the natural
-      // lean axis when standing on an insole.
-      // Roll is unused for now (could map to tricks later).
-      const scaledPitch = adjPitch * imuSensitivity.pitch;
-      const dzPitch = applyDeadzone(scaledPitch, CONFIG.inputDeadzone, CONFIG.inputMaxAngle);
-      smoothedPitch += (dzPitch - smoothedPitch) * CONFIG.inputSmoothing;
-
+      // Turn: pitch ±5° threshold, full turn at inputMaxAngle
+      const TURN_THRESHOLD = 5; // degrees
+      const turnValue = applyDeadzone(adjPitch * imuSensitivity.pitch, TURN_THRESHOLD, CONFIG.inputMaxAngle);
+      smoothedPitch += (turnValue - smoothedPitch) * CONFIG.inputSmoothing;
       inputState.turnInput = clamp(smoothedPitch, -1, 1);
-      inputState.speedInput = 0; // carving IS speed control
-      inputState.source = "insole";
-    }
 
-    if (sensorType === "linearAcceleration") {
-      if (!calibrated) return;
-
-      const { y } = event.message.linearAcceleration;
+      // Jump: roll triggers jump (either direction)
+      const JUMP_ROLL_THRESHOLD = 7; // degrees
       const now = performance.now();
-
-      if (Math.abs(y) > CONFIG.accelJumpThreshold && now - lastJumpTime > CONFIG.jumpCooldown) {
+      if (Math.abs(adjRoll) > JUMP_ROLL_THRESHOLD && now - lastJumpTime > CONFIG.jumpCooldown) {
+        console.log(`JUMP triggered: adjRoll=${adjRoll.toFixed(1)}°`);
         inputState.jumpInput = true;
         lastJumpTime = now;
         requestAnimationFrame(() => {
           inputState.jumpInput = false;
         });
       }
+
+      // Brake: pitch > +7° (lean forward) applies braking
+      const BRAKE_PITCH_THRESHOLD = 7; // degrees
+      if (adjPitch > BRAKE_PITCH_THRESHOLD) {
+        inputState.speedInput = -Math.min(1, (adjPitch - BRAKE_PITCH_THRESHOLD) / (CONFIG.inputMaxAngle - BRAKE_PITCH_THRESHOLD));
+        console.log(`BRAKE: adjPitch=${adjPitch.toFixed(1)}°, speedInput=${inputState.speedInput.toFixed(2)}`);
+      } else {
+        inputState.speedInput = 0;
+      }
+
+      inputState.source = "insole";
     }
   };
 
@@ -183,7 +184,7 @@ export function connectInsoleAdapter(device: any) {
   cleanup = () => {
     device.removeEventListener("sensorData", onSensorData);
     try {
-      device.setSensorConfiguration({ gameRotation: 0, linearAcceleration: 0 });
+      device.setSensorConfiguration({ gameRotation: 0 });
     } catch {}
     inputState.source = "keyboard";
     cleanup = null;

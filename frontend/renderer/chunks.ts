@@ -122,8 +122,8 @@ export class TerrainChunkManager {
 
   update(playerZ: number) {
     const currentChunk = Math.floor(playerZ / CONFIG.chunkSize);
-    const ahead = 4;
-    const behind = 2;
+    const ahead = 40;
+    const behind = 3;
 
     for (let z = currentChunk - behind; z <= currentChunk + ahead; z++) {
       if (!this.chunks.find((c) => c.chunkZ === z)) {

@@ -126,30 +126,12 @@ function getHalfpipeHeight(x: number, z: number): number {
     pipeProfile = PIPE_WALL_HEIGHT + beyondLip * 0.3;
   }
 
-  const detail = noise.noise2D(x * 0.06, z * 0.06) * 0.15;
-  return slope + pipeProfile + detail;
+  return slope + pipeProfile;
 }
 
 function getFreerideHeight(x: number, z: number): number {
   const slope = z * CONFIG.slopeGrade;
-
-  // Steep sections — every ~150m the grade increases 1.5x for ~30m
-  const steepPhase = noise.noise2D(0, z * 0.007) * 0.5;
-  const steepExtra = z * steepPhase * 0.15;
-
-  // Gentle rolling terrain (natural mountain contours)
-  const roll = noise.noise2D(x * 0.003, z * 0.003) * 3;
-
-  // Medium undulations — natural bumps that launch at speed
-  const bumps = noise.noise2D(x * 0.015, z * 0.015) * 1.2;
-
-  // Small mogul-like features
-  const moguls = noise.noise2D(x * 0.04, z * 0.04) * 0.5;
-
-  // Fine snow texture
-  const detail = noise.noise2D(x * 0.06, z * 0.06) * 0.15;
-
-  return slope + steepExtra + roll + bumps + moguls + detail;
+  return slope;
 }
 
 export function getTerrainHeight(x: number, z: number): number {

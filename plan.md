@@ -1,7 +1,5 @@
 # SoleSurfer — Build Plan (24-Hour Hackathon)
 
-> **Status: All 4 phases complete.** See README.md for current project documentation.
-
 ## Architecture Overview
 
 ```

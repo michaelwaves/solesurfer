@@ -46,32 +46,31 @@
 ## Architecture Decisions
 
 - **Keep Next.js 16** — existing project has working BrilliantSole integration. Don't rebuild.
-- **Raw Three.js** — not React Three Fiber. React handles UI only. Easier backcountry-simulator port.
+- **Raw Three.js** for Halfpipe/Freeride — React handles UI only. **React Three Fiber** for Gem Grab (self-contained).
 - **WebSpatial dropped** — incompatible with Three.js canvas (flattens to 2D panel). WebXR only for PICO.
 - **Procedural terrain for physics** — World Labs splats are visual backdrop only. No GLB collision alignment.
 - **100k splats** — for PICO mobile GPU with stereo WebXR rendering.
 - **SparkJS** (`@sparkjsdev/spark`) — World Labs' official Three.js Gaussian splat renderer.
-- **IMU orientation only** — raw pitch/roll for controls. No pressure data needed. Simpler integration.
+- **Pitch for steering** — lean forward/back to turn. Matches Gem Grab approach. More natural than roll on an insole.
+- **gameRotation sensor** — quaternion via `sensorData` event, converted to euler (YXZ) with Three.js. Auto-calibrated baseline.
 - **Shared mutable ref** for input — React hooks write insole state, game loop reads synchronously at 60Hz.
 - **Vercel deployment** — stable HTTPS URL required for Web Bluetooth + WebXR.
 - **API key in client JS** — accepted risk for hackathon. Use `.env` + `.gitignore`.
 
 ## Input Mapping: BrilliantSole → Snowboard Controls
 
-**IMU orientation only** — uses raw pitch and roll from the insole's orientation sensor. No pressure data needed, simpler integration.
+**Pitch-based steering** — all three game modes use pitch (lean forward/back) for direction control. This matches the natural lean axis when standing on an insole.
 
 | IMU Data | Game Action | How |
 |---|---|---|
-| Roll (left/right tilt) | Turn left/right | Roll angle → edge angle → carve direction |
-| Pitch (forward/back tilt) | Speed control | Lean forward → tuck (less drag) / lean back → brake (more drag) |
+| Pitch (lean forward/back) | Turn left/right | Pitch angle → edge angle → carve direction |
 | Sharp vertical acceleration | Jump | `linearAcceleration.y` spike → jump trigger |
-| Roll while airborne | Trick spin | Roll angle → spin rotation |
 
 ### Insole Degradation
 | State | Behavior |
 |---|---|
-| Insole connected | Full IMU control (roll → turn, pitch → speed) |
-| No insole connected | Keyboard fallback (A/D → turn, W/S → speed, Space → jump) |
+| Insole connected | Pitch → turn, accel → jump. Auto-calibrated on connect. |
+| No insole connected | Keyboard fallback (A/D → turn, Space → jump) |
 
 ## Phased Build Plan (Layered — Each Phase is Demo-Ready)
 

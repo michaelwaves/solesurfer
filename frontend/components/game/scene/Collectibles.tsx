@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
@@ -22,9 +22,30 @@ type CoinData = {
 
 let idCounter = 0;
 
+const CRYSTAL_MAT = new THREE.MeshPhysicalMaterial({
+  color: "#aa44ff",
+  emissive: "#6600cc",
+  emissiveIntensity: 0.5,
+  roughness: 0.05,
+  metalness: 0.1,
+  transmission: 0.45,
+  thickness: 0.8,
+  transparent: true,
+});
+
 function Gem() {
   const { scene } = useGLTF("/gem.glb");
-  return <primitive object={scene.clone()} />;
+  const cloned = useMemo(() => {
+    const clone = scene.clone(true);
+    clone.traverse((obj) => {
+      if ((obj as THREE.Mesh).isMesh) {
+        (obj as THREE.Mesh).material = CRYSTAL_MAT;
+        (obj as THREE.Mesh).castShadow = true;
+      }
+    });
+    return clone;
+  }, [scene]);
+  return <primitive object={cloned} scale={0.5} />;
 }
 
 useGLTF.preload("/gem.glb");
@@ -105,7 +126,7 @@ export default function Collectibles() {
         <group
           key={coin.id}
           ref={coin.ref as React.RefObject<THREE.Group>}
-          position={[coin.x, 0.5, coin.z]}
+          position={[coin.x, 1.0, coin.z]}
         >
           <Gem />
         </group>

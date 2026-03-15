@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, createRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Line } from "@react-three/drei";
+import { Line, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { useGameStore } from "@/store/useGameStore";
 
@@ -51,28 +51,28 @@ function ClickCatcher() {
   );
 }
 
+const PINE_MAT = new THREE.MeshStandardMaterial({
+  color: "#2a7a2a",
+  roughness: 0.8,
+  metalness: 0.0,
+});
+
 function Tree() {
-  return (
-    <group>
-      <mesh position={[0, 0.6, 0]} castShadow>
-        <coneGeometry args={[0.5, 2.2, 7]} />
-        <meshStandardMaterial color="#1a5c1a" roughness={0.8} />
-      </mesh>
-      <mesh position={[0, 1.8, 0]} castShadow>
-        <coneGeometry args={[0.35, 1.8, 7]} />
-        <meshStandardMaterial color="#1e6b1e" roughness={0.8} />
-      </mesh>
-      <mesh position={[0, 2.9, 0]} castShadow>
-        <coneGeometry args={[0.2, 1.2, 7]} />
-        <meshStandardMaterial color="#236b23" roughness={0.8} />
-      </mesh>
-      <mesh castShadow>
-        <cylinderGeometry args={[0.1, 0.15, 0.7, 6]} />
-        <meshStandardMaterial color="#5c3d1e" roughness={0.9} />
-      </mesh>
-    </group>
-  );
+  const { scene } = useGLTF("/pine.glb");
+  const cloned = useMemo(() => {
+    const clone = scene.clone(true);
+    clone.traverse((obj) => {
+      if ((obj as THREE.Mesh).isMesh) {
+        (obj as THREE.Mesh).material = PINE_MAT;
+        (obj as THREE.Mesh).castShadow = true;
+      }
+    });
+    return clone;
+  }, [scene]);
+  return <primitive object={cloned} />;
 }
+
+useGLTF.preload("/pine.glb");
 
 function Rock() {
   return (

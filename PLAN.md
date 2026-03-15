@@ -19,7 +19,7 @@
 │  │  - Scene picker       │    │  ┌─────▼─────┐  ┌────────────┐  │  │
 │  │  - Start screen       │    │  │ Character │  │ Particles  │  │  │
 │  │  - Debug overlay      │    │  │ + Camera  │  │ (≤200)     │  │  │
-│  │                       │    │  └───────────┘  └────────────┘  │  │
+│  │  - IMU telemetry      │    │  └───────────┘  └────────────┘  │  │
 │  └───────────┬───────────┘    └──────────┬───────────────────────┘  │
 │              │                            │                          │
 │  ┌───────────▼────────────────────────────▼──────────────────────┐  │
@@ -31,15 +31,16 @@
 │  │  Input Manager (shared mutable ref)                           │  │
 │  │  ┌──────────────────┐  ┌──────────────────┐                   │  │
 │  │  │ Insole adapter   │  │ Keyboard adapter │  ← same interface │  │
-│  │  │ (extends existing│  │ (A/D/W/S/Space)  │                   │  │
-│  │  │  hooks/contexts) │  │                  │                   │  │
+│  │  │ pitch=turn       │  │ (A/D/Space)      │                   │  │
+│  │  │ roll>7°=jump     │  │                  │                   │  │
+│  │  │ roll<-7°=brake   │  │                  │                   │  │
 │  │  └──────────────────┘  └──────────────────┘                   │  │
 │  └───────────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────────────┘
            │                                     │
      ┌─────▼─────┐                        ┌──────▼──────────┐
      │ Web BT    │                        │ World Labs API  │
-     │ Insoles   │                        │ (pre-gen scenes)│
+     │ Insoles   │                        │ (cached in IDB) │
      └───────────┘                        └─────────────────┘
 ```
 
@@ -50,185 +51,68 @@
 - **WebSpatial dropped** — incompatible with Three.js canvas (flattens to 2D panel). WebXR only for PICO.
 - **Procedural terrain for physics** — World Labs splats are visual backdrop only. No GLB collision alignment.
 - **100k splats** — for PICO mobile GPU with stereo WebXR rendering.
-- **SparkJS** (`@sparkjsdev/spark`) — World Labs' official Three.js Gaussian splat renderer.
-- **Pitch for steering** — lean forward/back to turn. Matches Gem Grab approach. More natural than roll on an insole.
+- **SparkJS** (`@sparkjsdev/spark`) — World Labs' official Three.js Gaussian splat renderer. Requires SparkRenderer.
+- **Pitch for steering** — lean forward/back to turn. Roll for jump (+7°) and brake (-7°).
 - **gameRotation sensor** — quaternion via `sensorData` event, converted to euler (YXZ) with Three.js. Auto-calibrated baseline.
 - **Shared mutable ref** for input — React hooks write insole state, game loop reads synchronously at 60Hz.
+- **Flat terrain** — no bumps/moguls. Gentle slope (0.15 grade, ~8.5°). Jumps are player-initiated only.
+- **Scene caching** — World Labs SPZ cached in IndexedDB, metadata in localStorage. No re-generation needed.
+- **Immersive Mode** — selectable from mode menu, auto-enters WebXR VR on PICO.
 - **Vercel deployment** — stable HTTPS URL required for Web Bluetooth + WebXR.
-- **API key in client JS** — accepted risk for hackathon. Use `.env` + `.gitignore`.
 
 ## Input Mapping: BrilliantSole → Snowboard Controls
 
-**Pitch-based steering** — all three game modes use pitch (lean forward/back) for direction control. This matches the natural lean axis when standing on an insole.
-
-| IMU Data | Game Action | How |
+| IMU Motion | Game Action | Threshold |
 |---|---|---|
-| Pitch (lean forward/back) | Turn left/right | Pitch angle → edge angle → carve direction |
-| Sharp vertical acceleration | Jump | `linearAcceleration.y` spike → jump trigger |
+| Pitch (lean forward/back) | Turn left/right | ±5° deadzone, full at 45° |
+| Roll > +7° (tilt right) | Jump | Player lifted 0.2m, force 5 m/s |
+| Roll < -7° (tilt left) | Brake | Progressive up to 20 m/s² decel |
 
 ### Insole Degradation
 | State | Behavior |
 |---|---|
-| Insole connected | Pitch → turn, accel → jump. Auto-calibrated on connect. |
+| Insole connected | Pitch → turn, roll → jump/brake. Auto-calibrated on connect. |
 | No insole connected | Keyboard fallback (A/D → turn, Space → jump) |
 
-## Phased Build Plan (Layered — Each Phase is Demo-Ready)
+## Completed Features
 
-### Phase 1: Core Game Engine (Hours 0-8) ← MVP
-**Goal:** Playable snowboard game in browser with BrilliantSole input
+### Phase 1: Core Game Engine ✅
+- [x] Physics engine: gravity, friction, drag, carving, trick scoring
+- [x] Terrain: halfpipe geometry + freeride flat slope with trees
+- [x] Three.js renderer: character, chunks, camera, particles, speed lines
+- [x] BrilliantSole IMU integration: pitch=turn, roll=jump/brake
+- [x] Keyboard fallback (A/D + Space)
+- [x] NaN guard + dt clamp
+- [x] Fixed-timestep game loop (60Hz)
 
-#### 1a. Project Setup (~30min)
-- Install new dependencies in `frontend/`:
-  ```bash
-  npm install three @types/three @sparkjsdev/spark
-  ```
-- Add new directories:
-  ```
-  frontend/
-    game/
-      physics.ts          # Extracted from backcountry-simulator
-      terrain.ts          # Procedural terrain (simplex noise)
-      config.ts           # Game constants
-      state.ts            # Game state machine + player state
-      loop.ts             # Game loop (fixed timestep physics, vSync render)
-    input/
-      input-state.ts      # Shared mutable InputState ref
-      insole-adapter.ts   # Maps BS IMU orientation (pitch/roll) → InputState
-      keyboard-adapter.ts # Maps keyboard → InputState (A/D/W/S/Space)
-    renderer/
-      scene.ts            # Three.js scene setup
-      camera.ts           # Third-person camera
-      character.ts        # Snowboarder model
-      chunks.ts           # Terrain chunk rendering (ring buffer, ≤16 chunks)
-      particles.ts        # Snow spray (≤200 particles, billboard sprites)
-    components/
-      GameCanvas.tsx       # "use client" wrapper, dynamic import (ssr: false)
-      HUD.tsx             # Speed, score overlay (CSS overlay on canvas)
-      DebugOverlay.tsx    # Toggleable debug info (backtick key)
-    app/
-      play/page.tsx       # Game page route (/play)
-  ```
-- Remove `brilliantsole-cloud` submodule and `.gitmodules`
-- **Existing code reused as-is:** All `components/brilliantsole/*`, `hooks/*`, `context/*`
+### Phase 2: World Labs Integration ✅
+- [x] World Labs API client (Marble 0.1-mini)
+- [x] SparkJS splat rendering with SparkRenderer
+- [x] Scene selection UI with generate/skip options
+- [x] SPZ caching in IndexedDB (reuse without API key)
+- [x] Splat follows camera each frame
+- [x] Fog pushed back when splat loaded
 
-#### 1b. Extract Backcountry Physics (~2hr)
-- Port `updatePhysics()`, `CONFIG`, `SimplexNoise`, `getProceduralHeight()` to TypeScript
-- Remove all Three.js dependencies from physics (replace THREE.Vector3 with plain `{x,y,z}`)
-- Keep the sidecut-radius carving model — it's the best part
-- Port terrain chunk system and obstacle placement
-- **Critical:** Add `Math.min(dt, 0.1)` clamp to prevent teleportation on alt-tab
-- **Critical:** Add NaN guard — if any position/velocity is NaN, reset to last known good state
-- **Test:** Physics runs headless with keyboard input, console-log position
+### Phase 3: WebXR + Immersive Mode ✅
+- [x] WebXR session management (enter/exit VR)
+- [x] Immersive Mode in mode select (auto-enters VR)
+- [x] VR HUD (canvas texture on plane)
+- [x] Stereo rendering + head tracking on PICO
 
-#### 1c. BrilliantSole IMU Integration (~1hr)
-- Create `insole-adapter.ts` that:
-  - Subscribes to IMU orientation events on connected device
-  - Configure sensor: `orientation: 20ms`, `linearAcceleration: 20ms`
-  - Maps raw orientation → shared `InputState` ref:
-    - Roll (left/right tilt) → `turnInput` (-1 to +1)
-    - Pitch (forward/back tilt) → `speedInput` (-1 = brake, +1 = tuck)
-    - Vertical acceleration spike → `jumpInput` (debounced)
-    - Roll while airborne → `trickSpin`
-  - Apply deadzone (~5°) and smoothing to prevent jitter
-- Create `keyboard-adapter.ts` with same `InputState` interface
-- **Reuses:** Existing device connection/pairing UI — no changes needed
-- **Test:** Connect insole, see roll/pitch values in debug overlay
-
-#### 1d. Three.js Renderer (~3hr)
-- `GameCanvas.tsx`: dynamically imported with `next/dynamic` + `ssr: false`
-- Scene setup: sky, fog, directional light, ambient light
-- Terrain chunk rendering with vertex colors (port from backcountry sim)
-  - Ring buffer of 12-16 chunks, recycle farthest when new one needed
-- Procedural snowboarder character (port from backcountry sim)
-- Third-person camera with smooth follow
-- Snow spray particle system (≤200 particles, billboard sprites)
-- Wire up: game loop reads InputState → physics tick → update character → update camera
-- Debug overlay: FPS, physics dt, insole state, input values (toggle with backtick)
-- **Test:** Playable snowboard game at `/play`
-
-### Phase 2: World Labs Integration (Hours 8-14)
-**Goal:** AI-generated mountain scenes as visual backdrop
-
-#### 2a. Pre-Generate Scenes (~1hr, can run in background)
-- Use World Labs API to generate 3-4 mountain scenes:
-  - "Steep powder bowl in the Japanese Alps with fresh snowfall"
-  - "Wide open alpine meadow above treeline with dramatic peaks"
-  - "Narrow tree-lined backcountry chute with deep powder"
-  - Upload a real mountain photo → generate from image
-- Use `marble-0.1-mini` for speed (30 seconds each)
-- Download **100k SPZ** (Gaussian splats) for PICO performance
-- Store scene metadata (thumbnails, captions) for the scene picker
-
-#### 2b. SparkJS Splat Rendering (~3hr)
-- Integrate SparkJS (`@sparkjsdev/spark`) for Gaussian splat rendering
-- `SparkRenderer` manages GPU-accelerated sorting (web worker)
-- `SplatMesh` extends `THREE.Object3D` — add to existing Three.js scene
-- Splats render as **visual backdrop only** — procedural terrain handles all physics
-- Set `antialias: false` on `THREE.WebGLRenderer` (splats don't benefit, saves GPU)
-- Error handling: if SPZ load fails (corrupt, OOM), fall back to procedural-only with toast
-- **Test:** Ride procedural terrain with AI-generated mountain visible in background
-
-#### 2c. Scene Selection UI (~2hr)
-- "Choose Your Mountain" screen showing generated scene thumbnails + captions
-- Option to generate a new scene from text prompt (show loading state, 60s timeout)
-- Wrap API calls in try/catch — on any failure (401, 429, timeout), fall back to procedural with toast
-- Store pre-generated scene assets in `public/scenes/` (bundled with deploy)
-- **Test:** Pick a mountain → load it → ride it
-
-### Phase 3: PICO WebXR Experience (Hours 14-20)
-**Goal:** Immersive VR experience on PICO headset
-
-#### 3a. WebXR Setup (~3hr)
-- Add WebXR session support to Three.js renderer
-- Use `XRSession.requestAnimationFrame` instead of standard rAF when in VR
-- Configure VR button to enter immersive mode
-- Adjust camera for VR (stereo rendering, head tracking)
-- Scale the world appropriately for VR (1 unit = 1 meter)
-- Handle session end gracefully (pause game, show re-enter button)
-- **Test:** Put on headset → see the mountain → ride with insoles
-
-#### 3b. VR HUD Overlays (~2hr)
-- Speed/score as Three.js text rendered on a plane anchored to camera
-- Or use `CSS2DRenderer` for HTML overlays in VR space
-- Insole connection status indicator (green/yellow/red dot)
-- Keep HUD minimal — VR real estate is precious
-- **Test:** HUD visible and readable in VR
-
-### Phase 4: Polish & Demo Prep (Hours 20-24)
-**Goal:** Bulletproof demo, fallbacks, presentation
-
-#### 4a. Demo Hardening (~2hr)
-- Verify all fallback modes:
-  - No insoles → keyboard controls
-  - No headset → desktop browser mode
-  - World Labs API down → procedural terrain fallback
-  - WebGL context lost → show "reload" message
-- Fix any visual bugs, tune camera, adjust physics feel
-- Add a "demo mode" auto-run if all else fails
-- Reduce/disable particles in WebXR if FPS < 72
-
-#### 4b. Visual Polish (~1hr)
-- Tune particle effects, snow spray
-- Add speed lines / motion blur at high speed
-- Sound effects (wind, carving) if time allows
-- Smooth transitions between scenes
-
-#### 4c. Presentation + Pre-Demo Verification (~1hr)
-- Prepare the demo narrative:
-  1. "Describe a mountain" → World Labs generates it (pre-cached, show the API call)
-  2. Put on PICO headset → immersive mountain scene
-  3. Step on insoles → "you ARE the snowboarder"
-  4. Ride the mountain with your feet
-- **Pre-demo verification checklist:**
-  - [ ] Desktop + keyboard full playthrough (60 seconds)
-  - [ ] Insole disconnect mid-play → keyboard takes over
-  - [ ] Single insole connection → degraded control works
-  - [ ] Alt-tab during play → no teleportation (dt clamp works)
-  - [ ] World Labs fallback → block API, procedural loads
-  - [ ] WebXR enter/exit → no crash
-  - [ ] Scene switching → clean transition, no memory leak
-- Test the full flow end-to-end 3 times
-- Record a backup video in case of hardware failure
+### Phase 4: Polish ✅
+- [x] Flat terrain (no bumps/moguls, no unforced jumps)
+- [x] Roll-based jump (+7°) and brake (-7°)
+- [x] Stronger braking (20 m/s²)
+- [x] Jump physics fix (lift 0.2m above terrain for airborne detection)
+- [x] Extended terrain visibility (40 chunks ahead, 2000m)
+- [x] Gentle slope grade (0.15, ~8.5°)
+- [x] Closer camera (distance 6m, height 3m)
+- [x] IMU panel: roll bar, jump/brake indicators
+- [x] Gem Grab: calibration + recalibrate button
+- [x] Procedural audio (wind + carving)
+- [x] Speed lines at high velocity
+- [x] Debug overlay (backtick toggle)
+- [x] WebGL context loss handling
 
 ## Game Loop Architecture
 
@@ -244,13 +128,16 @@
 │     - dt = Math.min(rawDt, 0.1)  ← prevents teleport    │
 │     - if (isNaN(pos.x)) reset()  ← prevents fly-away    │
 │     - accumulator pattern for fixed timestep             │
+│     - Roll > +7° → jump (lift 0.2m off terrain)          │
+│     - Roll < -7° → brake (up to 20 m/s²)                │
 │                                                          │
 │  3. Render (vSync / XR frame rate)                       │
 │     - Update character mesh position/rotation            │
 │     - Update camera follow                               │
-│     - Update terrain chunks (ring buffer, ≤16 active)    │
+│     - Update terrain chunks (ring buffer, ≤64 active)    │
+│     - Update splat position (follow camera)              │
 │     - Update particle system (≤200 particles)            │
-│     - SparkJS renders splat backdrop                     │
+│     - SparkRenderer renders splat backdrop                │
 │     - Update HUD values                                  │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -260,44 +147,24 @@
 | Risk | Mitigation |
 |---|---|
 | BrilliantSole Bluetooth drops | Keyboard fallback always available; partial insole degradation |
-| World Labs API slow/down | Pre-generate scenes, bundle in public/. Procedural terrain fallback on any API error. |
+| World Labs API slow/down | Scene cached in IndexedDB. Procedural terrain fallback on any API error. |
 | PICO browser WebXR issues | Desktop browser demo still fully functional |
-| Physics feel wrong with insoles | Tune CONFIG constants live; have preset "feels good" values |
+| Physics feel wrong with insoles | Tune CONFIG constants live; IMU sensitivity slider (0.3x-3.0x) |
 | WebGL context lost | Show "reload page" message. Cannot recover without page reload. |
 | Three.js SSR in Next.js | Dynamic import with `ssr: false`. Existing pattern in codebase. |
-| Bundle size (Three.js ~600KB) | Dynamic import loads after initial page paint. User pairs insoles while game loads. |
-| PICO GPU overload | 100k splats, ≤200 particles, ≤16 terrain chunks. Reduce particles if FPS < 72. |
+| PICO GPU overload | 100k splats, ≤200 particles, ≤64 terrain chunks. |
 
 ## Tech Stack Summary
 
 ```
 Framework:     Next.js 16 + React 19 + TypeScript
 Styling:       Tailwind CSS v4
-3D Engine:     Three.js (raw, not R3F)
-Physics:       Custom (ported from backcountry-simulator)
+3D Engine:     Three.js (raw) + React Three Fiber (Gem Grab)
+Physics:       Custom (gravity, friction, drag, braking, trick scoring)
 Input:         BrilliantSole JS SDK (npm: brilliantsole)
-Scene Gen:     World Labs API (Marble 0.1-mini)
-Splat Render:  SparkJS (@sparkjsdev/spark) — 100k SPZ
-XR:            WebXR API (native Three.js support)
+Scene Gen:     World Labs API (Marble 0.1-mini), cached in IndexedDB
+Splat Render:  SparkJS (@sparkjsdev/spark) with SparkRenderer — 100k SPZ
+XR:            WebXR API (Immersive Mode + toggle)
+Audio:         Web Audio API (procedural wind + carving)
 Hosting:       Vercel (HTTPS required for Web BT + WebXR)
 ```
-
-## Key Dependencies to Install
-
-```bash
-cd frontend
-npm install three @types/three @sparkjsdev/spark
-```
-
-Existing deps (already installed): `brilliantsole`, `react`, `react-dom`, `next`, `tailwindcss`
-
-## Pre-Hackathon Prep (Do Now)
-
-1. [ ] Get World Labs API key from platform.worldlabs.ai
-2. [ ] Pre-generate 3-4 mountain scenes via the API, download 100k SPZ files
-3. [ ] Pair BrilliantSole insoles with your laptop, verify sensor data flows
-4. [ ] Test PICO browser WebXR with a simple Three.js scene
-5. [ ] Clone backcountry-simulator, study the physics code
-6. [ ] Set up Vercel deployment, verify PICO browser loads the HTTPS URL
-7. [ ] Verify Web Bluetooth works over HTTPS on deployed URL
-8. [ ] Remove brilliantsole-cloud submodule

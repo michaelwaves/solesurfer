@@ -3,6 +3,10 @@ import { CONFIG } from "@/game/config";
 import { PlayerState } from "@/game/state";
 import { getTerrainMode } from "@/game/terrain";
 
+// Camera rig — parent group that moves to follow the player.
+// In WebXR, Three.js positions the camera relative to this rig via head tracking.
+let _cameraRig: THREE.Group | null = null;
+
 export function createCamera() {
   const camera = new THREE.PerspectiveCamera(
     70,
@@ -13,10 +17,39 @@ export function createCamera() {
   return camera;
 }
 
+export function createCameraRig(camera: THREE.PerspectiveCamera, scene: THREE.Scene): THREE.Group {
+  _cameraRig = new THREE.Group();
+  _cameraRig.add(camera);
+  scene.add(_cameraRig);
+  return _cameraRig;
+}
+
+export function getCameraRig(): THREE.Group | null {
+  return _cameraRig;
+}
+
 const _targetPos = new THREE.Vector3();
 const _cameraTarget = new THREE.Vector3();
+const _rigTargetPos = new THREE.Vector3();
 
-export function updateCamera(camera: THREE.PerspectiveCamera, player: PlayerState) {
+export function updateCamera(camera: THREE.PerspectiveCamera, player: PlayerState, isVR = false) {
+  if (isVR && _cameraRig) {
+    // VR mode: move the rig to follow the player.
+    // Head tracking positions the camera relative to the rig.
+    const behindX = -Math.sin(player.rotation) * CONFIG.cameraDistance;
+    const behindZ = Math.cos(player.rotation) * CONFIG.cameraDistance;
+
+    _rigTargetPos.set(
+      player.position.x + behindX,
+      player.position.y + CONFIG.cameraHeight,
+      player.position.z + behindZ
+    );
+    _cameraRig.position.lerp(_rigTargetPos, CONFIG.cameraLerp);
+    _cameraRig.rotation.y = player.rotation;
+    return;
+  }
+
+  // Desktop mode: move the camera directly
   if (getTerrainMode() === "halfpipe") {
     // Halfpipe: camera centered on pipe, only follows downhill
     _targetPos.set(

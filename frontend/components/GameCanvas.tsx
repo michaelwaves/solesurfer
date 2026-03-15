@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import * as THREE from "three";
 import { createScene, createRenderer } from "@/renderer/scene";
-import { createCamera, updateCamera, handleResize } from "@/renderer/camera";
+import { createCamera, createCameraRig, updateCamera, handleResize } from "@/renderer/camera";
 import { createCharacter, updateCharacter } from "@/renderer/character";
 import { TerrainChunkManager } from "@/renderer/chunks";
 import { SnowParticles } from "@/renderer/particles";
@@ -59,6 +59,9 @@ export default function GameCanvas({
 
       const character = createCharacter();
       scene.add(character);
+
+      // Camera rig for WebXR — head tracking is relative to this group
+      createCameraRig(camera, scene);
 
       const chunkManager = new TerrainChunkManager(scene);
       const snowParticles = new SnowParticles(scene);
@@ -141,7 +144,8 @@ export default function GameCanvas({
 
         chunkManager.update(state.player.position.z);
         updateCharacter(character, state.player);
-        updateCamera(camera, state.player);
+        const isVR = renderer.xr.enabled && renderer.xr.isPresenting;
+        updateCamera(camera, state.player, isVR);
         splatScene.update(camera);
         snowParticles.update(state.player, rawDt);
         speedLines.update(state.player, camera, rawDt);

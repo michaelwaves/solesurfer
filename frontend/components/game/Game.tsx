@@ -6,6 +6,7 @@ import HUD from "./hud/HUD";
 import StartScreen from "./hud/StartScreen";
 import GameOverScreen from "./hud/GameOverScreen";
 import { useSensorOrientation } from "@/hooks/useSensorOrientation";
+import TuningPanel from "./hud/TuningPanel";
 
 export default function Game() {
   // Wire sensor → store (runs at top level so it lives for the game lifetime)
@@ -23,6 +24,7 @@ export default function Game() {
 
       {/* HTML overlays — absolutely positioned over canvas */}
       <HUD />
+      <TuningPanel />
       <StartScreen />
       <GameOverScreen />
     </div>

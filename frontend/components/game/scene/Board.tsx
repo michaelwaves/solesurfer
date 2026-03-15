@@ -5,10 +5,9 @@ import { useFrame } from "@react-three/fiber";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import * as THREE from "three";
 import { useGameStore } from "@/store/useGameStore";
+import { useTuningStore } from "@/store/useTuningStore";
 
 const SLOPE_HALF_WIDTH = 9;
-const STEER_SPEED = 15;
-const LEAN_FACTOR = 0.5;
 
 export const keysRef = { left: false, right: false };
 
@@ -27,7 +26,6 @@ function SnowboarderModel({ groupRef }: { groupRef: React.RefObject<THREE.Group>
   const { scene, animations } = useGLTF("/snowboarder.glb");
   const { actions, names } = useAnimations(animations, groupRef);
 
-  // Play the first animation clip if one exists
   useEffect(() => {
     if (names.length > 0) {
       actions[names[0]]?.reset().fadeIn(0.2).play();
@@ -42,6 +40,7 @@ useGLTF.preload("/snowboarder.glb");
 export default function Board() {
   const groupRef = useRef<THREE.Group>(null!);
   const { phase, boardPitch, boardX, setBoardX, tick } = useGameStore();
+  const { steerSpeed, leanFactor, yawFactor } = useTuningStore();
 
   useFrame((_, dt) => {
     if (phase !== "playing") return;
@@ -51,7 +50,7 @@ export default function Board() {
     if (keysRef.right) steer = 0.6;
 
     const newX = THREE.MathUtils.clamp(
-      boardX + steer * STEER_SPEED * dt,
+      boardX + steer * steerSpeed * dt,
       -SLOPE_HALF_WIDTH,
       SLOPE_HALF_WIDTH
     );
@@ -60,7 +59,8 @@ export default function Board() {
 
     if (groupRef.current) {
       groupRef.current.position.x = newX;
-      groupRef.current.rotation.z = -steer * LEAN_FACTOR;
+      groupRef.current.rotation.z = steer * leanFactor;
+      groupRef.current.rotation.y = -yawFactor * steer + Math.PI;
     }
   });
 

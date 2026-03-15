@@ -238,13 +238,14 @@ export function updatePhysics(player: PlayerState, input: InputState, dt: number
       player.velocity.z *= dragFactor;
     }
 
-    // 5. JUMP
-    if (input.jumpInput) {
+    // 5. JUMP (consume input so it only fires once)
+    if (input.jumpInput && !player.airborne) {
       player.velocity.x += normal.x * CONFIG.jumpForce * 0.5;
       player.velocity.y = CONFIG.jumpForce;
       player.velocity.z += normal.z * CONFIG.jumpForce * 0.5;
       player.position.y = terrainY + 0.2; // lift off terrain so airborne check passes
       player.airborne = true;
+      input.jumpInput = false; // consume — prevents re-triggering across physics ticks
     }
 
   }

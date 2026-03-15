@@ -116,11 +116,20 @@ export default function GameCanvas({
           pollKeyboard();
           accumulator += rawDt;
           while (accumulator >= CONFIG.fixedDt) {
-            updatePhysics(state.player, inputState, CONFIG.fixedDt);
+            updatePhysics(state.player, inputState, CONFIG.fixedDt, state);
             accumulator -= CONFIG.fixedDt;
           }
           state.time += rawDt;
           state.distance = Math.abs(state.player.position.z);
+
+          // Halfpipe run timer (60s runs)
+          if (mode === "halfpipe") {
+            state.runTimer -= rawDt;
+            if (state.runTimer <= 0) {
+              state.runTimer = 0;
+              transitionPhase(state, "paused");
+            }
+          }
         }
 
         chunkManager.update(state.player.position.z);

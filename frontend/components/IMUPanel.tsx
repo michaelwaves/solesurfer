@@ -75,7 +75,9 @@ export default function IMUPanel() {
         {/* Input bars */}
         <div className="space-y-1 pt-1 border-t border-white/5">
           <Bar value={inputState.turnInput} label="Turn" color="#e63946" />
-          <Bar value={inputState.speedInput} label="Speed" color="#3b82f6" />
+        </div>
+        <div className="text-[10px] text-[#707278] mt-1">
+          Pitch → Turn (lean forward/back to steer)
         </div>
 
         {/* Sensitivity sliders */}
@@ -84,26 +86,7 @@ export default function IMUPanel() {
             Sensitivity
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-[#707278] w-10 text-right">Roll</span>
-            <input
-              type="range"
-              min="0.3"
-              max="3"
-              step="0.1"
-              value={rollSens}
-              onChange={(e) => {
-                const v = parseFloat(e.target.value);
-                setRollSens(v);
-                imuSensitivity.roll = v;
-              }}
-              className="flex-1 h-1 accent-[#e63946]"
-            />
-            <span className="text-[10px] text-white w-8 tabular-nums font-mono">
-              {rollSens.toFixed(1)}x
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-[#707278] w-10 text-right">Pitch</span>
+            <span className="text-[10px] text-[#707278] w-10 text-right">Turn</span>
             <input
               type="range"
               min="0.3"
@@ -115,7 +98,7 @@ export default function IMUPanel() {
                 setPitchSens(v);
                 imuSensitivity.pitch = v;
               }}
-              className="flex-1 h-1 accent-[#3b82f6]"
+              className="flex-1 h-1 accent-[#e63946]"
             />
             <span className="text-[10px] text-white w-8 tabular-nums font-mono">
               {pitchSens.toFixed(1)}x

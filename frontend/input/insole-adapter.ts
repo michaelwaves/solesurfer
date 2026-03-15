@@ -146,18 +146,16 @@ export function connectInsoleAdapter(device: any) {
       imuTelemetry.adjRoll = adjRoll;
       imuTelemetry.adjPitch = adjPitch;
 
-      // Apply sensitivity, deadzone, smoothing
-      const scaledRoll = adjRoll * imuSensitivity.roll;
+      // Pitch = turn (lean forward/back to steer left/right)
+      // This matches Gem Grab's approach — pitch is the natural
+      // lean axis when standing on an insole.
+      // Roll is unused for now (could map to tricks later).
       const scaledPitch = adjPitch * imuSensitivity.pitch;
-
-      const dzRoll = applyDeadzone(scaledRoll, CONFIG.inputDeadzone, CONFIG.inputMaxAngle);
       const dzPitch = applyDeadzone(scaledPitch, CONFIG.inputDeadzone, CONFIG.inputMaxAngle);
-
-      smoothedRoll += (dzRoll - smoothedRoll) * CONFIG.inputSmoothing;
       smoothedPitch += (dzPitch - smoothedPitch) * CONFIG.inputSmoothing;
 
-      inputState.turnInput = clamp(smoothedRoll, -1, 1);
-      inputState.speedInput = clamp(smoothedPitch, -1, 1);
+      inputState.turnInput = clamp(smoothedPitch, -1, 1);
+      inputState.speedInput = 0; // carving IS speed control
       inputState.source = "insole";
     }
 

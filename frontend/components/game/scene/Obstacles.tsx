@@ -42,6 +42,15 @@ let idCounter = 0;
 
 // ── Tree & Rock ─────────────────────────────────────────────────────────────
 
+function ClickCatcher() {
+  return (
+    <mesh position={[0, 1.5, 0]}>
+      <sphereGeometry args={[2, 8, 8]} />
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+    </mesh>
+  );
+}
+
 function Tree() {
   return (
     <group>
@@ -273,6 +282,7 @@ export default function Obstacles() {
           onClick={(e) => { e.stopPropagation(); shoot(obs); }}
         >
           {obs.type === "tree" ? <Tree /> : <Rock />}
+          <ClickCatcher />
         </group>
       ))}
 

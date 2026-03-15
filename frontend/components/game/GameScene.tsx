@@ -6,6 +6,7 @@ import Obstacles from "./scene/Obstacles";
 import Collectibles from "./scene/Collectibles";
 import FollowCamera from "./scene/FollowCamera";
 import SplatBackground from "./scene/SplatBackground";
+import SplatErrorBoundary from "./scene/SplatErrorBoundary";
 
 export default function GameScene() {
   return (
@@ -22,7 +23,9 @@ export default function GameScene() {
         shadow-mapSize={[1024, 1024]}
       />
 
-      <SplatBackground />
+      <SplatErrorBoundary>
+        <SplatBackground />
+      </SplatErrorBoundary>
       <Board />
       <Terrain />
       <Obstacles />

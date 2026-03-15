@@ -2,6 +2,7 @@
 
 import { useRef, useState, useCallback } from "react";
 import { useFrame } from "@react-three/fiber";
+import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { useGameStore } from "@/store/useGameStore";
 
@@ -22,35 +23,11 @@ type CoinData = {
 let idCounter = 0;
 
 function Gem() {
-  return (
-    <group>
-      {/* Main gem body — octahedron like a cut diamond */}
-      <mesh castShadow>
-        <octahedronGeometry args={[0.35, 0]} />
-        <meshStandardMaterial
-          color="#b44fff"
-          emissive="#6a0dad"
-          emissiveIntensity={0.6}
-          metalness={0.1}
-          roughness={0.05}
-          transparent
-          opacity={0.88}
-        />
-      </mesh>
-      {/* Inner glow core */}
-      <mesh>
-        <octahedronGeometry args={[0.18, 0]} />
-        <meshStandardMaterial
-          color="#e0aaff"
-          emissive="#cc88ff"
-          emissiveIntensity={1.2}
-          transparent
-          opacity={0.5}
-        />
-      </mesh>
-    </group>
-  );
+  const { scene } = useGLTF("/gem.glb");
+  return <primitive object={scene.clone()} />;
 }
+
+useGLTF.preload("/gem.glb");
 
 export default function Collectibles() {
   const [coins, setCoins] = useState<CoinData[]>([]);

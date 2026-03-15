@@ -16,20 +16,32 @@ const SCALE = 7.056;
 export default function SplatBackground() {
   const { gl } = useThree();
 
-  const spark = useMemo(
-    () => new SparkRenderer({ renderer: gl, maxStdDev: Math.sqrt(5) }),
-    [gl]
-  );
+  const spark = useMemo(() => {
+    try {
+      return new SparkRenderer({ renderer: gl, maxStdDev: Math.sqrt(5) });
+    } catch (e) {
+      console.warn("[SplatBackground] SparkRenderer init failed:", e);
+      return null;
+    }
+  }, [gl]);
 
   const splatMesh = useMemo(() => {
-    const mesh = new SplatMesh({
-      url: "/scenes/icy-mountain-ski-resort.spz",
-    });
-    mesh.position.set(...POSITION);
-    mesh.quaternion.set(...QUATERNION);
-    mesh.scale.setScalar(SCALE);
-    return mesh;
-  }, []);
+    if (!spark) return null;
+    try {
+      const mesh = new SplatMesh({
+        url: "/scenes/icy-mountain-ski-resort.spz",
+      });
+      mesh.position.set(...POSITION);
+      mesh.quaternion.set(...QUATERNION);
+      mesh.scale.setScalar(SCALE);
+      return mesh;
+    } catch (e) {
+      console.warn("[SplatBackground] SplatMesh init failed:", e);
+      return null;
+    }
+  }, [spark]);
+
+  if (!spark || !splatMesh) return null;
 
   return (
     <>

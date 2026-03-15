@@ -221,7 +221,7 @@ export function updatePhysics(player: PlayerState, input: InputState, dt: number
 
     // Braking — speedInput < 0 applies extra friction
     if (input.speedInput < 0 && player.speed > 0.1) {
-      const brakeStrength = 8; // m/s² max brake deceleration
+      const brakeStrength = 20; // m/s² max brake deceleration
       const brakeDecel = -input.speedInput * brakeStrength;
       const brakeFactor = Math.max(0, 1 - (brakeDecel * dt) / player.speed);
       player.velocity.x *= brakeFactor;
@@ -243,6 +243,7 @@ export function updatePhysics(player: PlayerState, input: InputState, dt: number
       player.velocity.x += normal.x * CONFIG.jumpForce * 0.5;
       player.velocity.y = CONFIG.jumpForce;
       player.velocity.z += normal.z * CONFIG.jumpForce * 0.5;
+      player.position.y = terrainY + 0.2; // lift off terrain so airborne check passes
       player.airborne = true;
     }
 

@@ -22,7 +22,7 @@ export const CONFIG = {
   riderMass: 80,              // kg (rider + board + gear)
 
   // Jump
-  jumpForce: 2.5,             // m/s upward velocity on ollie (~0.3m height)
+  jumpForce: 5,               // m/s upward velocity on ollie
   jumpCooldown: 500,          // ms
   accelJumpThreshold: 15,     // IMU threshold for jump detection
 
@@ -33,8 +33,8 @@ export const CONFIG = {
 
   // Rendering
   maxParticles: 200,
-  cameraDistance: 12,
-  cameraHeight: 5,
+  cameraDistance: 6,
+  cameraHeight: 3,
   cameraLerp: 0.06,
   fogNear: 500,
   fogFar: 3000,

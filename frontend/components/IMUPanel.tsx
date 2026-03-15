@@ -72,10 +72,16 @@ export default function IMUPanel() {
           base: R{t.baselineRoll.toFixed(1)}° P{t.baselinePitch.toFixed(1)}°
         </div>
 
+        {/* Thresholds */}
+        <div className="text-[10px] text-[#707278] font-mono pt-1 border-t border-white/5">
+          roll {t.adjRoll > 7 ? <span className="text-green-400 font-bold">JUMP</span> : t.adjRoll < -7 ? <span className="text-orange-400 font-bold">BRAKE</span> : <span>neutral</span>} ({t.adjRoll > 0 ? "+" : ""}{t.adjRoll.toFixed(1)}° / ±7°)
+        </div>
+
         {/* Input bars */}
         <div className="space-y-1 pt-1 border-t border-white/5">
           <Bar value={inputState.turnInput} label="Turn" color="#e63946" />
           <Bar value={inputState.speedInput} label="Brake" color="#ff9900" />
+          <Bar value={t.adjRoll / 30} label="Roll" color="#22c55e" />
         </div>
         <div className="flex gap-3 text-[10px] mt-1">
           <span className={inputState.jumpInput ? "text-green-400 font-bold" : "text-[#707278]"}>

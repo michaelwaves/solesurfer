@@ -1,9 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { GameState, GameMode } from "@/game/state";
-import { WorldScene, PRESET_SCENES, generateScene } from "@/lib/worldlabs";
+import { WorldScene, PRESET_SCENES, generateScene, getCachedScene, clearCachedScene } from "@/lib/worldlabs";
 import HUD from "@/components/HUD";
 import DebugOverlay from "@/components/DebugOverlay";
 import InsolePanel from "@/components/InsolePanel";
@@ -103,6 +103,16 @@ function SceneSelect({
   const [apiKey, setApiKey] = useState("");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
+  const [cachedScene, setCachedScene] = useState<WorldScene | null>(null);
+  const [loadingCache, setLoadingCache] = useState(true);
+
+  // Load cached scene on mount
+  useEffect(() => {
+    getCachedScene().then((scene) => {
+      setCachedScene(scene);
+      setLoadingCache(false);
+    });
+  }, []);
 
   const handleGenerate = async () => {
     if (!prompt.trim() || !apiKey.trim()) return;
@@ -115,6 +125,11 @@ function SceneSelect({
       setError(e instanceof Error ? e.message : "Generation failed");
       setGenerating(false);
     }
+  };
+
+  const handleClearCache = () => {
+    clearCachedScene();
+    setCachedScene(null);
   };
 
   const availablePresets = PRESET_SCENES.filter((s) => s.spzUrl);
@@ -135,6 +150,29 @@ function SceneSelect({
         <h2 className="text-3xl font-bold text-white tracking-tight mb-12">
           Choose Your<br />Mountain
         </h2>
+
+        {/* Cached scene — last generated, stored locally */}
+        {!loadingCache && cachedScene && (
+          <div className="mb-10">
+            <p className="text-xs uppercase tracking-widest text-[#707278] mb-4">
+              Last Generated
+            </p>
+            <button
+              onClick={() => onSelect(cachedScene)}
+              className="btn-outline-light w-full text-left px-5 py-4 mb-2"
+            >
+              <div className="font-medium text-sm">{cachedScene.name}</div>
+              <div className="text-xs text-[#707278] mt-0.5">{cachedScene.caption}</div>
+              <div className="text-[10px] text-green-400/60 mt-1 uppercase tracking-widest">Cached locally</div>
+            </button>
+            <button
+              onClick={handleClearCache}
+              className="text-[10px] text-[#707278] hover:text-[#e63946] uppercase tracking-widest transition-colors"
+            >
+              Clear cache
+            </button>
+          </div>
+        )}
 
         {/* Pre-generated scenes */}
         {availablePresets.length > 0 && (

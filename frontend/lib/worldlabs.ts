@@ -34,6 +34,88 @@ export const PRESET_SCENES: WorldScene[] = [
   },
 ];
 
+const CACHE_KEY = "solesurfer_cached_scene";
+const CACHE_SPZ_KEY = "solesurfer_cached_spz";
+
+// Save scene metadata + SPZ blob to local storage / IndexedDB
+async function cacheScene(scene: WorldScene): Promise<WorldScene> {
+  try {
+    // Download the SPZ file and store as blob in IndexedDB
+    const res = await fetch(scene.spzUrl);
+    if (res.ok) {
+      const blob = await res.blob();
+      await saveSPZBlob(blob);
+      // Store metadata in localStorage
+      localStorage.setItem(CACHE_KEY, JSON.stringify(scene));
+      console.log(`Cached scene: ${scene.name} (${(blob.size / 1024).toFixed(0)} KB)`);
+    }
+  } catch (e) {
+    console.warn("Failed to cache scene SPZ:", e);
+  }
+  return scene;
+}
+
+// IndexedDB helpers for large SPZ binary
+function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("solesurfer_cache", 1);
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore("spz");
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveSPZBlob(blob: Blob): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("spz", "readwrite");
+    tx.objectStore("spz").put(blob, CACHE_SPZ_KEY);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function loadSPZBlob(): Promise<Blob | null> {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction("spz", "readonly");
+      const req = tx.objectStore("spz").get(CACHE_SPZ_KEY);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
+
+// Load cached scene — returns scene with a local blob URL for the SPZ
+export async function getCachedScene(): Promise<WorldScene | null> {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const scene: WorldScene = JSON.parse(raw);
+    const blob = await loadSPZBlob();
+    if (!blob) return null;
+    // Create a blob URL so SparkJS can load it locally
+    scene.spzUrl = URL.createObjectURL(blob);
+    console.log(`Loaded cached scene: ${scene.name}`);
+    return scene;
+  } catch {
+    return null;
+  }
+}
+
+export function clearCachedScene() {
+  localStorage.removeItem(CACHE_KEY);
+  openDB().then((db) => {
+    const tx = db.transaction("spz", "readwrite");
+    tx.objectStore("spz").delete(CACHE_SPZ_KEY);
+  }).catch(() => {});
+}
+
 export async function generateScene(
   apiKey: string,
   prompt: string,
@@ -83,13 +165,18 @@ export async function generateScene(
     const op = await pollRes.json();
     if (op.done) {
       const world = op.response;
-      return {
+      const scene: WorldScene = {
         id: world.id,
         name: world.display_name,
         spzUrl: world.assets.splats.spz_urls["100k"],
         thumbnailUrl: world.assets.thumbnail_url || "",
         caption: world.assets.caption || prompt,
       };
+
+      // Cache the scene locally
+      await cacheScene(scene);
+
+      return scene;
     }
   }
 

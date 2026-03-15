@@ -151,10 +151,10 @@ export function connectInsoleAdapter(device: any) {
       smoothedPitch += (turnValue - smoothedPitch) * CONFIG.inputSmoothing;
       inputState.turnInput = clamp(smoothedPitch, -1, 1);
 
-      // Jump: roll triggers jump (either direction)
-      const JUMP_ROLL_THRESHOLD = 7; // degrees
+      // Jump: roll > +7° triggers jump
+      const ROLL_THRESHOLD = 7; // degrees
       const now = performance.now();
-      if (Math.abs(adjRoll) > JUMP_ROLL_THRESHOLD && now - lastJumpTime > CONFIG.jumpCooldown) {
+      if (adjRoll > ROLL_THRESHOLD && now - lastJumpTime > CONFIG.jumpCooldown) {
         console.log(`JUMP triggered: adjRoll=${adjRoll.toFixed(1)}°`);
         inputState.jumpInput = true;
         lastJumpTime = now;
@@ -163,11 +163,10 @@ export function connectInsoleAdapter(device: any) {
         });
       }
 
-      // Brake: pitch > +7° (lean forward) applies braking
-      const BRAKE_PITCH_THRESHOLD = 7; // degrees
-      if (adjPitch > BRAKE_PITCH_THRESHOLD) {
-        inputState.speedInput = -Math.min(1, (adjPitch - BRAKE_PITCH_THRESHOLD) / (CONFIG.inputMaxAngle - BRAKE_PITCH_THRESHOLD));
-        console.log(`BRAKE: adjPitch=${adjPitch.toFixed(1)}°, speedInput=${inputState.speedInput.toFixed(2)}`);
+      // Brake: roll < -7° applies braking
+      if (adjRoll < -ROLL_THRESHOLD) {
+        inputState.speedInput = -Math.min(1, (-adjRoll - ROLL_THRESHOLD) / (30 - ROLL_THRESHOLD));
+        console.log(`BRAKE: adjRoll=${adjRoll.toFixed(1)}°, speedInput=${inputState.speedInput.toFixed(2)}`);
       } else {
         inputState.speedInput = 0;
       }

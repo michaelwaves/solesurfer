@@ -3,6 +3,7 @@ import { CONFIG } from "@/game/config";
 
 let cleanup: (() => void) | null = null;
 let lastJumpTime = 0;
+let jumpArmed = true; // Must return below threshold before next jump
 
 // Smoothed values to reduce jitter
 let smoothedRoll = 0;
@@ -145,18 +146,22 @@ export function connectInsoleAdapter(device: any) {
       imuTelemetry.adjRoll = adjRoll;
       imuTelemetry.adjPitch = adjPitch;
 
-      // Turn: pitch ±5° threshold, full turn at inputMaxAngle
+      // Turn: pitch ±5° threshold, full turn at inputMaxAngle (inverted for natural feel)
       const TURN_THRESHOLD = 5; // degrees
-      const turnValue = applyDeadzone(adjPitch * imuSensitivity.pitch, TURN_THRESHOLD, CONFIG.inputMaxAngle);
+      const turnValue = applyDeadzone(-adjPitch * imuSensitivity.pitch, TURN_THRESHOLD, CONFIG.inputMaxAngle);
       smoothedPitch += (turnValue - smoothedPitch) * CONFIG.inputSmoothing;
       inputState.turnInput = clamp(smoothedPitch, -1, 1);
 
-      // Jump: roll > +7° triggers jump
+      // Jump: roll > +7° triggers jump (must return below threshold to re-arm)
       const ROLL_THRESHOLD = 7; // degrees
       const now = performance.now();
-      if (adjRoll > ROLL_THRESHOLD && now - lastJumpTime > CONFIG.jumpCooldown) {
+      if (adjRoll <= ROLL_THRESHOLD * 0.5) {
+        jumpArmed = true; // Re-arm when roll returns well below threshold
+      }
+      if (adjRoll > ROLL_THRESHOLD && jumpArmed && now - lastJumpTime > CONFIG.jumpCooldown) {
         console.log(`JUMP triggered: adjRoll=${adjRoll.toFixed(1)}°`);
         inputState.jumpInput = true;
+        jumpArmed = false;
         lastJumpTime = now;
         requestAnimationFrame(() => {
           inputState.jumpInput = false;
